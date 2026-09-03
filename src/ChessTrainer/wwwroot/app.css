@@ -1434,9 +1434,29 @@ a {
     .topbar {
         position: relative;
         grid-template-columns: 1fr auto;
+        height: auto;
+        min-height: 72px;
+        padding: 10px 16px 8px;
+        gap: 8px 12px;
     }
 
     .main-nav {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+        gap: 6px;
+    }
+
+    .main-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .main-nav a[href^="#"] {
         display: none;
     }
 
@@ -1937,19 +1957,46 @@ a {
     }
 }
 
-/* Coordonnées sur bord droit et bas */
-.border-letter-bottom {
-    right: 4px;
-    bottom: 2px;
-    font-size: clamp(8px, .9vw, 11px);
+/* Coordonnées sur bord droit et bas (Mode Moyen & Intermédiaire) */
+.coord.border-letter-bottom {
+    right: 5px;
+    bottom: 3px;
+    font-size: clamp(11px, 1.3vw, 15px);
     font-weight: 800;
+    color: #ff0033 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(255, 0, 51, 0.4);
 }
 
-.border-number-right {
-    top: 2px;
-    right: 4px;
-    font-size: clamp(8px, .9vw, 11px);
+.coord.border-number-right {
+    top: 3px;
+    right: 5px;
+    font-size: clamp(11px, 1.3vw, 15px);
     font-weight: 800;
+    color: #ff0033 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(255, 0, 51, 0.4);
+}
+
+/* Lettre et ligne cibles affichées en plus gros et en rouge sur le plateau (sans background) */
+.coord.target-coord-active {
+    font-size: clamp(18px, 2.4vw, 26px) !important;
+    font-weight: 900 !important;
+    color: #ff0033 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 0, 51, 0.85);
+    z-index: 8;
+    animation: targetCoordPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes targetCoordPulse {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.2);
+    }
 }
 
 /* Animation des lignes guidées (Mode Intermédiaire) */
@@ -1961,7 +2008,7 @@ a {
     overflow: hidden;
 }
 
-/* Ligne verticale qui monte vers le haut depuis le bas et s'arrête */
+/* Ligne verticale qui monte vers le haut depuis le bas et s'arrête (6s) */
 .guided-v-line {
     position: absolute;
     bottom: 0;
@@ -1970,17 +2017,14 @@ a {
     box-shadow: 0 0 10px rgba(255, 0, 51, 0.9);
     transform-origin: bottom center;
     transform: translateX(-50%) scaleY(0);
-    opacity: 0;
-    animation: lineGrowUp 1s cubic-bezier(0.22, 1, 0.36, 1) 2.2s forwards;
+    opacity: 0.9;
+    animation: lineGrowUp 6s linear forwards;
 }
 
 @keyframes lineGrowUp {
     0% {
         transform: translateX(-50%) scaleY(0);
-        opacity: 0;
-    }
-    15% {
-        opacity: 1;
+        opacity: 0.85;
     }
     100% {
         transform: translateX(-50%) scaleY(1);
@@ -1988,7 +2032,7 @@ a {
     }
 }
 
-/* Ligne horizontale qui part de la gauche vers la droite et s'arrête */
+/* Ligne horizontale qui part de la gauche vers la droite et s'arrête (6s) */
 .guided-h-line {
     position: absolute;
     left: 0;
@@ -1997,17 +2041,14 @@ a {
     box-shadow: 0 0 10px rgba(255, 0, 51, 0.9);
     transform-origin: left center;
     transform: translateY(-50%) scaleX(0);
-    opacity: 0;
-    animation: lineGrowRight 1s cubic-bezier(0.22, 1, 0.36, 1) 2.2s forwards;
+    opacity: 0.9;
+    animation: lineGrowRight 6s linear forwards;
 }
 
 @keyframes lineGrowRight {
     0% {
         transform: translateY(-50%) scaleX(0);
-        opacity: 0;
-    }
-    15% {
-        opacity: 1;
+        opacity: 0.85;
     }
     100% {
         transform: translateY(-50%) scaleX(1);
@@ -2015,18 +2056,18 @@ a {
     }
 }
 
-/* Point au croisement des deux lignes */
+/* Point au croisement des deux lignes (apparaît au contact à 6s) */
 .guided-cross-point {
     position: absolute;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #ff0033;
     border: 2px solid #ffffff;
-    box-shadow: 0 0 12px rgba(255, 0, 51, 1);
+    box-shadow: 0 0 16px rgba(255, 0, 51, 1);
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
-    animation: crosshairPointAppear 0.35s ease-out 3.2s forwards, crosshairPointPulse 1s ease-in-out 3.55s infinite alternate;
+    animation: crosshairPointAppear 0.2s ease-out 6s forwards, crosshairPointPulse 0.8s ease-in-out 6.2s infinite alternate;
 }
 
 @keyframes crosshairPointAppear {
@@ -2047,7 +2088,7 @@ a {
     }
     to {
         transform: translate(-50%, -50%) scale(1.35);
-        box-shadow: 0 0 18px rgba(255, 0, 0, 1);
+        box-shadow: 0 0 20px rgba(255, 0, 0, 1);
     }
 }
 
@@ -2121,6 +2162,50 @@ a {
 .feedback-badge.error {
     background: #f8d7da;
     color: #721c24;
+}
+
+/* Jauge de chrono Mode Intermédiaire (6s) */
+.intermediate-timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin: 4px 0 14px;
+}
+
+.intermediate-timer-bar {
+    width: 100%;
+    max-width: 220px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.intermediate-timer-progress {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff4d6d, #ff0033);
+    border-radius: 999px;
+    box-shadow: 0 0 6px rgba(255, 0, 51, 0.6);
+    transform-origin: left center;
+    animation: intermediateProgressShrink 6s linear forwards;
+}
+
+.intermediate-timer-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #c53929;
+    letter-spacing: .02em;
+}
+
+@keyframes intermediateProgressShrink {
+    0% {
+        transform: scaleX(1);
+    }
+    100% {
+        transform: scaleX(0);
+    }
 }
 
 /* Grille de stats */
@@ -2263,5 +2348,115 @@ a {
         flex-direction: column;
         align-items: flex-start;
     }
+}
+
+/* Section des modes d'entraînement complémentaires sur la page d'accueil */
+.training-modes-section {
+    margin-top: clamp(24px, 4vw, 40px);
+    padding: clamp(20px, 3vw, 32px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--paper);
+    box-shadow: 0 16px 40px rgba(35, 46, 39, .06);
+}
+
+.training-modes-heading {
+    margin-bottom: 20px;
+}
+
+.training-modes-heading h2 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(20px, 2.5vw, 26px);
+    color: var(--forest);
+    margin: 4px 0 6px;
+}
+
+.training-modes-heading p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.training-modes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.training-mode-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    background: #f7f6f0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.training-mode-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(36, 68, 51, .35);
+    box-shadow: 0 8px 24px rgba(35, 46, 39, .1);
+}
+
+.training-mode-icon {
+    font-size: 28px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.training-mode-copy strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 16px;
+    color: var(--forest);
+    margin-bottom: 6px;
+}
+
+.training-mode-badge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.training-mode-badge-wrap strong {
+    margin-bottom: 0;
+}
+
+.mode-badge.new {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #dff0d8;
+    color: #2b6623;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 10px;
+    letter-spacing: .05em;
+}
+
+.training-mode-copy p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin-bottom: 16px;
+}
+
+.training-mode-arrow {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--forest);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.training-mode-card:hover .training-mode-arrow {
+    color: #2e6949;
 }
 

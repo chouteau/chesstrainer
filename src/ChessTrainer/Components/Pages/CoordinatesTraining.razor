@@ -101,8 +101,8 @@
                     <div class="diff-card-header">
                         <span class="diff-badge intermediate">Intermédiaire</span>
                     </div>
-                    <strong>Lignes guidées</strong>
-                    <small>Lignes animées (montante et venant de gauche) après quelques secondes</small>
+                    <strong>Lignes guidées (6s)</strong>
+                    <small>6 secondes pour cliquer avant que les lignes ne se touchent (sinon point perdu !)</small>
                 </button>
 
                 <button type="button"
@@ -111,8 +111,8 @@
                     <div class="diff-card-header">
                         <span class="diff-badge medium">Moyen</span>
                     </div>
-                    <strong>Bords en petit</strong>
-                    <small>Chiffres à droite et lettres en bas en petit format</small>
+                    <strong>Bords en rouge</strong>
+                    <small>Lettres en bas et lignes à droite en plus gros et en rouge</small>
                 </button>
 
                 <button type="button"
@@ -165,7 +165,7 @@
                         <button type="button"
                                 class="square @(isLight ? "light" : "dark") @SquareFeedbackClass(square)"
                                 aria-label="@SquareAriaLabel(square)"
-                                disabled="@(isTimedMode && !timerActive && isTimedSessionFinished)"
+                                disabled="@((isTimedMode && !timerActive && isTimedSessionFinished) || isRoundTransitioning)"
                                 @onclick="() => HandleSquareClick(square)">
                             
                             @if (showFullLabel)
@@ -184,13 +184,16 @@
                             {
                                 @if (GetBorderCoordinates(square, out var letter, out var number))
                                 {
+                                    var isTargetFile = displayMode == CoordinateDisplayMode.BorderRightBottom && letter is not null && square[0] == targetSquare[0];
+                                    var isTargetRank = displayMode == CoordinateDisplayMode.BorderRightBottom && number is not null && square[1] == targetSquare[1];
+
                                     @if (letter is not null)
                                     {
-                                        <span class="coord border-letter-bottom">@letter</span>
+                                        <span class="coord border-letter-bottom @(isTargetFile ? "target-coord-active" : null)">@letter</span>
                                     }
                                     @if (number is not null)
                                     {
-                                        <span class="coord border-number-right">@number</span>
+                                        <span class="coord border-number-right @(isTargetRank ? "target-coord-active" : null)">@number</span>
                                     }
                                 }
                             }
@@ -242,6 +245,16 @@
                         <div class="target-display">
                             <span class="target-square-label">@targetSquare.ToUpperInvariant()</span>
                         </div>
+
+                        @if (displayMode == CoordinateDisplayMode.CrossLines && (!isTimedMode || timerActive) && !isTimedSessionFinished)
+                        {
+                            <div class="intermediate-timer-wrap" @key="@($"timer-{targetSquare}-{orientation}-{targetRound}")">
+                                <div class="intermediate-timer-bar">
+                                    <div class="intermediate-timer-progress"></div>
+                                </div>
+                                <span class="intermediate-timer-label">⏱ 6s avant contact des lignes !</span>
+                            </div>
+                        }
 
                         <div class="feedback-badge @FeedbackClass">
                             @feedbackMessage
@@ -315,6 +328,8 @@
     private int totalAttempts;
     private int streak;
     private int bestStreak;
+    private CancellationTokenSource? intermediateCts;
+    private bool isRoundTransitioning;
 
     private int Accuracy => totalAttempts == 0 ? 100 : (score * 100) / totalAttempts;
 
@@ -328,16 +343,32 @@
     protected override void OnInitialized()
     {
         GenerateNextTarget();
+        StartIntermediateRoundTimer();
     }
 
     private void SetDisplayMode(CoordinateDisplayMode mode)
     {
         displayMode = mode;
+        if (displayMode == CoordinateDisplayMode.CrossLines)
+        {
+            StartIntermediateRoundTimer();
+        }
+        else
+        {
+            intermediateCts?.Cancel();
+            intermediateCts?.Dispose();
+            intermediateCts = null;
+            isRoundTransitioning = false;
+        }
     }
 
     private void SetOrientation(BoardOrientation newOrientation)
     {
         orientation = newOrientation;
+        if (displayMode == CoordinateDisplayMode.CrossLines)
+        {
+            StartIntermediateRoundTimer();
+        }
     }
 
     private void SetTimedMode(bool timed)
@@ -352,6 +383,7 @@
         timerActive = true;
         isTimedSessionFinished = false;
         timeLeft = 30;
+        StartIntermediateRoundTimer();
 
         timer?.Dispose();
         timer = new System.Threading.Timer(_ =>
@@ -368,6 +400,7 @@
                     timeLeft = 0;
                     timerActive = false;
                     isTimedSessionFinished = true;
+                    intermediateCts?.Cancel();
                     timer?.Dispose();
                     timer = null;
                     StateHasChanged();
@@ -378,6 +411,10 @@
 
     private void ResetSession()
     {
+        intermediateCts?.Cancel();
+        intermediateCts?.Dispose();
+        intermediateCts = null;
+        isRoundTransitioning = false;
         timer?.Dispose();
         timer = null;
         timerActive = false;
@@ -391,6 +428,68 @@
         lastResult = null;
         feedbackMessage = "Clique sur la case demandée";
         GenerateNextTarget();
+        StartIntermediateRoundTimer();
+    }
+
+    private void StartIntermediateRoundTimer()
+    {
+        intermediateCts?.Cancel();
+        intermediateCts?.Dispose();
+        intermediateCts = null;
+
+        if (displayMode != CoordinateDisplayMode.CrossLines)
+        {
+            return;
+        }
+
+        if (isTimedMode && (!timerActive || isTimedSessionFinished))
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        intermediateCts = cts;
+
+        _ = RunIntermediateTimerAsync(cts.Token);
+    }
+
+    private async Task RunIntermediateTimerAsync(CancellationToken token)
+    {
+        try
+        {
+            // 6 secondes pour cliquer avant que les lignes ne se touchent
+            await Task.Delay(6000, token);
+            if (token.IsCancellationRequested) return;
+
+            await InvokeAsync(async () =>
+            {
+                if (token.IsCancellationRequested) return;
+
+                totalAttempts++;
+                streak = 0;
+                lastResult = false;
+                lastClickedSquare = targetSquare;
+                feedbackMessage = $"Temps écoulé ! Les lignes se sont touchées sur {targetSquare.ToUpperInvariant()} : point perdu.";
+                isRoundTransitioning = true;
+                StateHasChanged();
+
+                // Laisse 1,2s pour visualiser le contact et la case manquée
+                await Task.Delay(1200, token);
+                if (token.IsCancellationRequested) return;
+
+                isRoundTransitioning = false;
+                lastClickedSquare = null;
+                lastResult = null;
+                feedbackMessage = "Trouve la nouvelle case avant que les lignes ne se touchent !";
+                GenerateNextTarget();
+                StartIntermediateRoundTimer();
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            // Timer interrompu normalement (clic réussi, changement de mode ou réinitialisation)
+        }
     }
 
     private int targetRound;
@@ -433,14 +532,22 @@
 
     private void SkipTarget()
     {
+        if (isRoundTransitioning) return;
+
         feedbackMessage = $"Case ignorée ({targetSquare.ToUpperInvariant()})";
         lastResult = null;
         lastClickedSquare = null;
         GenerateNextTarget();
+        StartIntermediateRoundTimer();
     }
 
     private void HandleSquareClick(string square)
     {
+        if (isRoundTransitioning)
+        {
+            return;
+        }
+
         if (isTimedMode && (!timerActive || isTimedSessionFinished))
         {
             return;
@@ -451,6 +558,7 @@
 
         if (square == targetSquare)
         {
+            intermediateCts?.Cancel();
             score++;
             streak++;
             if (streak > bestStreak)
@@ -461,6 +569,7 @@
             lastResult = true;
             feedbackMessage = $"Bravo ! {square.ToUpperInvariant()} trouvé.";
             GenerateNextTarget();
+            StartIntermediateRoundTimer();
         }
         else
         {
@@ -518,5 +627,7 @@
     public void Dispose()
     {
         timer?.Dispose();
+        intermediateCts?.Cancel();
+        intermediateCts?.Dispose();
     }
 }
