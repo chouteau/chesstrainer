@@ -1,0 +1,120 @@
+name: Cleanup Old Docker Images
+
+on:
+  schedule:
+    # Exécution quotidienne à 03h00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Mode simulation (affiche les images sans les supprimer)'
+        type: boolean
+        default: false
+
+jobs:
+  cleanup-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Cleanup old container package versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE_NAME: ${{ github.event.repository.name || 'chesstrainer' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "🔍 Recherche des versions du paquet conteneur : $PACKAGE_NAME (propriétaire : $OWNER)..."
+          
+          # Récupération des versions (compatible compte utilisateur et organisation)
+          ENDPOINT_TYPE=""
+          if gh api --paginate "/user/packages/container/${PACKAGE_NAME}/versions" > versions.json 2>/dev/null; then
+            ENDPOINT_TYPE="user"
+          elif gh api --paginate "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions" > versions.json 2>/dev/null; then
+            ENDPOINT_TYPE="org"
+          elif gh api --paginate "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions" > versions.json 2>/dev/null; then
+            ENDPOINT_TYPE="named-user"
+          else
+            echo "ℹ️ Aucun package ou version trouvé pour '${PACKAGE_NAME}'. Fin du workflow."
+            exit 0
+          fi
+
+          VERSION_COUNT=$(jq '. | length' versions.json 2>/dev/null || echo "0")
+          echo "📦 $VERSION_COUNT version(s) trouvée(s)."
+          if [ "$VERSION_COUNT" -eq 0 ]; then
+            exit 0
+          fi
+
+          # Identifier le numéro de version le plus élevé (format semver / numérique comme 1.0.0.0)
+          HIGHEST_VERSION=$( (jq -r '.[].metadata.container.tags[]?' versions.json 2>/dev/null | grep -E '^[0-9]+(\.[0-9]+)*$' || true) | sort -V | tail -n 1)
+          if [ -n "$HIGHEST_VERSION" ]; then
+            echo "🏆 Version la plus élevée détectée à conserver : $HIGHEST_VERSION"
+          else
+            echo "ℹ️ Aucun tag de version numérique trouvé."
+          fi
+
+          # Calcul du timestamp limite (7 jours dans le passé)
+          CUTOFF_SEC=$(date -d "7 days ago" +%s)
+          echo "⏳ Date limite de conservation (7 jours) : $(date -d "7 days ago" --iso-8601=seconds)"
+
+          TO_DELETE=()
+
+          # Parcourir chaque image
+          for row in $(jq -r '.[] | @base64' versions.json); do
+            _jq() {
+              echo ${row} | base64 --decode | jq -r ${1}
+            }
+
+            ID=$(_jq '.id')
+            CREATED_AT=$(_jq '.created_at')
+            CREATED_SEC=$(date -d "$CREATED_AT" +%s)
+            TAGS=$(echo ${row} | base64 --decode | jq -r '.metadata.container.tags[]?' | tr '\n' ' ' | sed 's/ $//')
+
+            # 1. Ne jamais supprimer le tag "latest"
+            if echo "$TAGS" | grep -qw "latest"; then
+              echo "🛡️ Conservation [ID: $ID] (tag 'latest' présent) - Tags: [$TAGS]"
+              continue
+            fi
+
+            # 2. Ne jamais supprimer la version la plus haute
+            if [ -n "$HIGHEST_VERSION" ] && echo "$TAGS" | grep -qw "$HIGHEST_VERSION"; then
+              echo "🛡️ Conservation [ID: $ID] (version la plus haute '$HIGHEST_VERSION') - Tags: [$TAGS]"
+              continue
+            fi
+
+            # 3. Vérification de l'ancienneté (> 7 jours)
+            if [ "$CREATED_SEC" -lt "$CUTOFF_SEC" ]; then
+              echo "🗑️ À supprimer [ID: $ID] (créée le $CREATED_AT > 7 jours) - Tags: [$TAGS]"
+              TO_DELETE+=("$ID")
+            else
+              echo "⏳ Conservation [ID: $ID] (récente, créée le $CREATED_AT <= 7 jours) - Tags: [$TAGS]"
+            fi
+          done
+
+          echo "----------------------------------------"
+          echo "Total de versions à supprimer : ${#TO_DELETE[@]}"
+
+          if [ ${#TO_DELETE[@]} -eq 0 ]; then
+            echo "✅ Aucune version obsolète à supprimer."
+            exit 0
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "⚠️ Mode simulation activé : aucune suppression effectuée."
+            exit 0
+          fi
+
+          for ID in "${TO_DELETE[@]}"; do
+            echo "Suppression de la version $ID..."
+            if [ "$ENDPOINT_TYPE" = "org" ]; then
+              gh api -X DELETE "/orgs/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${ID}"
+            elif [ "$ENDPOINT_TYPE" = "named-user" ]; then
+              gh api -X DELETE "/users/${OWNER}/packages/container/${PACKAGE_NAME}/versions/${ID}"
+            else
+              gh api -X DELETE "/user/packages/container/${PACKAGE_NAME}/versions/${ID}"
+            fi
+          done
+
+          echo "✨ Nettoyage terminé avec succès !"

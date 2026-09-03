@@ -1434,9 +1434,29 @@ a {
     .topbar {
         position: relative;
         grid-template-columns: 1fr auto;
+        height: auto;
+        min-height: 72px;
+        padding: 10px 16px 8px;
+        gap: 8px 12px;
     }
 
     .main-nav {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+        gap: 6px;
+    }
+
+    .main-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .main-nav a[href^="#"] {
         display: none;
     }
 
@@ -1642,3 +1662,801 @@ a {
         font-size: clamp(30px, 10.8vw, 53px);
     }
 }
+
+/* ==========================================================================
+   Coordonnées Training Styles
+   ========================================================================== */
+
+.coordinates-content {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 32px clamp(16px, 3vw, 48px) 64px;
+}
+
+.coordinates-intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.coordinates-intro h1 {
+    margin: 6px 0;
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(24px, 2.5vw, 32px);
+    letter-spacing: -.03em;
+}
+
+.coordinates-intro p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.coordinates-settings-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.setting-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.setting-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6a746c;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.toggle-group {
+    display: inline-flex;
+    background: #e6e3da;
+    border: 1px solid #d9d5cb;
+    border-radius: 9px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.toggle-group button {
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #555f57;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.toggle-group button.active {
+    background: var(--paper);
+    color: var(--forest);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+/* Section de sélection des difficultés */
+.difficulty-selection {
+    margin-bottom: 24px;
+}
+
+.difficulty-title {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #6a746c;
+    margin-bottom: 10px;
+}
+
+.difficulty-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.25fr 1fr 1fr;
+    gap: 10px;
+}
+
+.diff-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    padding: 12px 12px;
+    background: var(--paper);
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .2s ease;
+    min-width: 0;
+}
+
+.diff-card:hover {
+    border-color: #a8b8aa;
+    transform: translateY(-1px);
+}
+
+.diff-card.selected {
+    border-color: var(--forest);
+    background: #fbfbf8;
+    box-shadow: 0 6px 18px rgba(32, 45, 37, .08);
+}
+
+.diff-card-header {
+    margin-bottom: 8px;
+}
+
+.diff-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.diff-badge.very-easy {
+    background: #d4edda;
+    color: #155724;
+}
+
+.diff-badge.easy {
+    background: #e2f0d9;
+    color: #2b6623;
+}
+
+.diff-badge.intermediate {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.diff-badge.medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.diff-badge.hard {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.diff-card strong {
+    font-size: 12px;
+    color: var(--forest);
+    margin-bottom: 4px;
+    white-space: nowrap;
+}
+
+.diff-card small {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.3;
+}
+
+/* Zone de travail Coordinates */
+.coordinates-workspace {
+    display: grid;
+    grid-template-columns: minmax(360px, 560px) minmax(280px, 1fr);
+    gap: clamp(24px, 4vw, 48px);
+    align-items: start;
+    padding: clamp(20px, 3vw, 36px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--paper);
+    box-shadow: 0 18px 50px rgba(35, 46, 39, .08);
+}
+
+.coordinates-board-column {
+    width: 100%;
+}
+
+.coordinates-board-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 32px;
+    margin-bottom: 12px;
+}
+
+.side-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #555f57;
+}
+
+.timer-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: #e2ece5;
+    color: var(--forest);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.timer-badge.urgent {
+    background: #fce8e6;
+    color: #c53929;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .8; transform: scale(1.05); }
+}
+
+/* Échiquier spécifique aux coordonnées */
+.coordinates-board {
+    position: relative;
+    user-select: none;
+}
+
+.coordinates-board .square {
+    transition: background-color .15s ease;
+}
+
+.square-full-coord {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(11px, 1.4vw, 16px);
+    font-weight: 800;
+    letter-spacing: .02em;
+    color: rgba(35, 56, 46, .82);
+    pointer-events: none;
+}
+
+.square.dark .square-full-coord {
+    color: rgba(255, 255, 255, .88);
+}
+
+.square-full-coord.target-highlight {
+    color: #1b4b32 !important;
+    background: rgba(208, 235, 83, .85);
+    padding: 3px 8px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+    animation: targetPulse 1.2s infinite alternate;
+}
+
+@keyframes targetPulse {
+    from { transform: scale(0.95); }
+    to { transform: scale(1.1); }
+}
+
+.target-surround-ring {
+    position: absolute;
+    inset: 6%;
+    border: 4px solid #ff0033;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 6;
+    box-shadow: 0 0 12px rgba(255, 0, 51, 0.85), inset 0 0 8px rgba(255, 0, 51, 0.4);
+    animation: surroundPulse 1s ease-in-out infinite alternate;
+}
+
+@keyframes surroundPulse {
+    0% {
+        transform: scale(0.92);
+        opacity: 0.85;
+        border-color: #ff1744;
+        box-shadow: 0 0 8px rgba(255, 23, 68, 0.7);
+    }
+    100% {
+        transform: scale(1.04);
+        opacity: 1;
+        border-color: #ff0000;
+        box-shadow: 0 0 18px rgba(255, 0, 0, 0.95), inset 0 0 10px rgba(255, 0, 0, 0.45);
+    }
+}
+
+/* Coordonnées sur bord droit et bas (Mode Moyen & Intermédiaire) */
+.coord.border-letter-bottom {
+    right: 5px;
+    bottom: 3px;
+    font-size: clamp(11px, 1.3vw, 15px);
+    font-weight: 800;
+    color: #ff0033 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(255, 0, 51, 0.4);
+}
+
+.coord.border-number-right {
+    top: 3px;
+    right: 5px;
+    font-size: clamp(11px, 1.3vw, 15px);
+    font-weight: 800;
+    color: #ff0033 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 6px rgba(255, 0, 51, 0.4);
+}
+
+/* Lettre et ligne cibles affichées en plus gros et en rouge sur le plateau (sans background) */
+.coord.target-coord-active {
+    font-size: clamp(18px, 2.4vw, 26px) !important;
+    font-weight: 900 !important;
+    color: #ff0033 !important;
+    background: transparent !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 0, 51, 0.85);
+    z-index: 8;
+    animation: targetCoordPulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes targetCoordPulse {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.2);
+    }
+}
+
+/* Animation des lignes guidées (Mode Intermédiaire) */
+.guided-crosshair-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    overflow: hidden;
+}
+
+/* Ligne verticale qui monte vers le haut depuis le bas et s'arrête (6s) */
+.guided-v-line {
+    position: absolute;
+    bottom: 0;
+    width: 4px;
+    background: #ff0033;
+    box-shadow: 0 0 10px rgba(255, 0, 51, 0.9);
+    transform-origin: bottom center;
+    transform: translateX(-50%) scaleY(0);
+    opacity: 0.9;
+    animation: lineGrowUp 6s linear forwards;
+}
+
+@keyframes lineGrowUp {
+    0% {
+        transform: translateX(-50%) scaleY(0);
+        opacity: 0.85;
+    }
+    100% {
+        transform: translateX(-50%) scaleY(1);
+        opacity: 1;
+    }
+}
+
+/* Ligne horizontale qui part de la gauche vers la droite et s'arrête (6s) */
+.guided-h-line {
+    position: absolute;
+    left: 0;
+    height: 4px;
+    background: #ff0033;
+    box-shadow: 0 0 10px rgba(255, 0, 51, 0.9);
+    transform-origin: left center;
+    transform: translateY(-50%) scaleX(0);
+    opacity: 0.9;
+    animation: lineGrowRight 6s linear forwards;
+}
+
+@keyframes lineGrowRight {
+    0% {
+        transform: translateY(-50%) scaleX(0);
+        opacity: 0.85;
+    }
+    100% {
+        transform: translateY(-50%) scaleX(1);
+        opacity: 1;
+    }
+}
+
+/* Point au croisement des deux lignes (apparaît au contact à 6s) */
+.guided-cross-point {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #ff0033;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 16px rgba(255, 0, 51, 1);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    animation: crosshairPointAppear 0.2s ease-out 6s forwards, crosshairPointPulse 0.8s ease-in-out 6.2s infinite alternate;
+}
+
+@keyframes crosshairPointAppear {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes crosshairPointPulse {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+        box-shadow: 0 0 10px rgba(255, 0, 51, 0.9);
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1.35);
+        box-shadow: 0 0 20px rgba(255, 0, 0, 1);
+    }
+}
+
+/* Flash retour de clic */
+.coord-success-flash {
+    background: #7ec765 !important;
+    transition: background-color .1s ease;
+}
+
+.coord-error-flash {
+    background: #e66a55 !important;
+    animation: shake 0.35s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+
+/* Panneau d'action & cible */
+.coordinates-action-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.target-card {
+    padding: 24px 20px;
+    background: #f7f6f0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    text-align: center;
+}
+
+.target-display {
+    margin: 12px 0 16px;
+}
+
+.target-square-label {
+    display: inline-block;
+    padding: 10px 28px;
+    background: var(--forest);
+    color: #f7f9f3;
+    font-family: "Manrope", sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(27, 43, 34, .25);
+}
+
+.feedback-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.feedback-badge.neutral {
+    background: #e9ece7;
+    color: #536056;
+}
+
+.feedback-badge.success {
+    background: #dff0d8;
+    color: #2b6623;
+}
+
+.feedback-badge.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Jauge de chrono Mode Intermédiaire (6s) */
+.intermediate-timer-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    margin: 4px 0 14px;
+}
+
+.intermediate-timer-bar {
+    width: 100%;
+    max-width: 220px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.intermediate-timer-progress {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff4d6d, #ff0033);
+    border-radius: 999px;
+    box-shadow: 0 0 6px rgba(255, 0, 51, 0.6);
+    transform-origin: left center;
+    animation: intermediateProgressShrink 6s linear forwards;
+}
+
+.intermediate-timer-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #c53929;
+    letter-spacing: .02em;
+}
+
+@keyframes intermediateProgressShrink {
+    0% {
+        transform: scaleX(1);
+    }
+    100% {
+        transform: scaleX(0);
+    }
+}
+
+/* Grille de stats */
+.stats-card {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+    background: #f7f6f0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: var(--paper);
+    border-radius: 8px;
+    border: 1px solid #e5e2d8;
+}
+
+.stat-value {
+    font-family: "Manrope", sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--forest);
+}
+
+.stat-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.action-buttons button {
+    flex: 1;
+    min-height: 40px;
+}
+
+/* Cartes Chrono 30s */
+.action-card {
+    padding: 28px 24px;
+    background: #f7f6f0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    text-align: center;
+}
+
+.card-icon {
+    font-size: 36px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.action-card h2 {
+    font-family: "Manrope", sans-serif;
+    font-size: 20px;
+    margin: 4px 0 8px;
+    color: var(--forest);
+}
+
+.action-card p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.cta-button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+}
+
+.summary-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 16px 0;
+}
+
+.summary-score strong {
+    font-family: "Manrope", sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--forest);
+    line-height: 1;
+}
+
+.summary-score span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: 4px;
+}
+
+.summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.back-to-free-button {
+    width: 100%;
+    margin-top: 10px;
+}
+
+/* Responsiveness Coordonnées */
+@media (max-width: 900px) {
+    .coordinates-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .difficulty-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .difficulty-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coordinates-settings-bar {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Section des modes d'entraînement complémentaires sur la page d'accueil */
+.training-modes-section {
+    margin-top: clamp(24px, 4vw, 40px);
+    padding: clamp(20px, 3vw, 32px);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--paper);
+    box-shadow: 0 16px 40px rgba(35, 46, 39, .06);
+}
+
+.training-modes-heading {
+    margin-bottom: 20px;
+}
+
+.training-modes-heading h2 {
+    font-family: "Manrope", sans-serif;
+    font-size: clamp(20px, 2.5vw, 26px);
+    color: var(--forest);
+    margin: 4px 0 6px;
+}
+
+.training-modes-heading p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.training-modes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.training-mode-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    background: #f7f6f0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.training-mode-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(36, 68, 51, .35);
+    box-shadow: 0 8px 24px rgba(35, 46, 39, .1);
+}
+
+.training-mode-icon {
+    font-size: 28px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.training-mode-copy strong {
+    display: block;
+    font-family: "Manrope", sans-serif;
+    font-size: 16px;
+    color: var(--forest);
+    margin-bottom: 6px;
+}
+
+.training-mode-badge-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.training-mode-badge-wrap strong {
+    margin-bottom: 0;
+}
+
+.mode-badge.new {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #dff0d8;
+    color: #2b6623;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-radius: 10px;
+    letter-spacing: .05em;
+}
+
+.training-mode-copy p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin-bottom: 16px;
+}
+
+.training-mode-arrow {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--forest);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: auto;
+}
+
+.training-mode-card:hover .training-mode-arrow {
+    color: #2e6949;
+}
+

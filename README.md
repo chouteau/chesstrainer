@@ -38,6 +38,18 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
 - **Filtres stratégiques** : triez les exercices par posture (*Tous*, *Attaque*, *Défense*).
 - **Aide et progression** : indices tactiques contextuels, notation algébrique des coups, détection d'erreurs et sauvegarde de la maîtrise des lignes.
 
+---
+
+### 3. 🎯 L'Entraînement aux coordonnées (`/coordonnees`)
+- **Repérage spatial interactif** : trouvez le plus rapidement possible la case demandée (ex: *C4*, *E4*, *A1*).
+- **Niveaux d'assistance gradués** :
+  - 🟢 **Très Facile** : affichage de toutes les coordonnées sur chaque case.
+  - 🟢 **Facile** : affichage de la coordonnée uniquement sur la case cible à cliquer.
+  - 🟡 **Moyen** : affichage des lettres en bas et des chiffres à droite en petit format.
+  - 🔴 **Difficile** : échiquier nu (aucune coordonnée affichée).
+- **Orientation du plateau** : basculement vue des Blancs ou vue des Noirs (inversé).
+- **Modes de jeu** : entraînement continu ou défi chrono de 30 secondes avec statistiques (score, série, record, précision).
+
 ![Entraîneur de pièges tactiques](docs/images/chess-trainer-traps.png)
 
 ---
@@ -80,6 +92,45 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
    Ouvrez votre navigateur web sur :
    - 🏠 **Pièges d'ouverture** : `http://localhost:5215` (ou port affiché dans la console)
    - ♟️ **Quiz des ouvertures** : `http://localhost:5215/quiz`
+   - 🎯 **Entraînement aux coordonnées** : `http://localhost:5215/coordonnees`
+
+---
+
+## 🐳 Utilisation avec Docker
+
+L'application est disponible sous forme d'image de conteneur optimisée et sécurisée basée sur **Ubuntu Chiseled** (.NET 10).
+
+### 1. Exécuter l'image depuis GitHub Container Registry (GHCR)
+
+Pour lancer directement la dernière version de production hébergée sur GitHub :
+
+```bash
+docker run -d -p 8080:8080 --name chesstrainer ghcr.io/chouteau/chesstrainer:latest
+```
+
+L'application est alors accessible sur `http://localhost:8080`.
+
+### 2. Construire et exécuter l'image localement
+
+Si vous préférez builder l'image vous-même :
+
+```bash
+# Construction de l'image
+docker build -t chesstrainer:local .
+
+# Lancement du conteneur
+docker run -d -p 8080:8080 --name chesstrainer chesstrainer:local
+```
+
+### 3. Déploiement en production avec Docker Compose (Traefik & Arcane)
+
+Un fichier [`docker-compose.prod.yml`](docker-compose.prod.yml) est préconfiguré pour un déploiement sur VPS via l'orchestrateur **Arcane** derrière un reverse proxy **Traefik** avec redirection automatique HTTP vers HTTPS et certificat SSL Let's Encrypt :
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+L'application sera automatiquement exposée et sécurisée sur votre nom de domaine configuré (`https://chesstrainer.chouteau.info`).
 
 ---
 

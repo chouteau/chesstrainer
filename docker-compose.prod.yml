@@ -1,6 +1,6 @@
 services:
   chesstrainer:
-    image: ghcr.io/chouteau/chesstrainer:prod
+    image: ghcr.io/chouteau/chesstrainer:latest
     container_name: chesstrainer-prod
     restart: unless-stopped
     environment:
@@ -9,6 +9,7 @@ services:
       - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
 
       # --- Routeur HTTP (redirection vers HTTPS) ---
       - "traefik.http.routers.chesstrainer-http.rule=Host(`chesstrainer.chouteau.info`)"
@@ -21,13 +22,18 @@ services:
       - "traefik.http.routers.chesstrainer-https.rule=Host(`chesstrainer.chouteau.info`)"
       - "traefik.http.routers.chesstrainer-https.entrypoints=websecure"
       - "traefik.http.routers.chesstrainer-https.tls=true"
-      - "traefik.http.routers.chesstrainer-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.chesstrainer-https.tls.certresolver=le-http"
+      - "traefik.http.routers.chesstrainer-https.service=chesstrainer"
 
       # --- Service & Port interne ---
       - "traefik.http.services.chesstrainer.loadbalancer.server.port=8080"
+      - "traefik.http.services.chesstrainer.loadbalancer.passhostheader=true"
     networks:
-      - traefik-net
+      - default
+      - traefik-public
 
 networks:
-  traefik-net:
+  traefik-public:
     external: true
+    name: traefik-public
+  default: {}

@@ -31,16 +31,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract project version
+        id: get_version
+        run: |
+          VERSION=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' src/ChessTrainer/ChessTrainer.csproj)
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
       - name: Extract Docker metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=pr
-            type=sha,format=short
-            type=raw,value=latest,enable=${{ github.event_name != 'pull_request' }}
-            type=raw,value=prod,enable=${{ github.base_ref == 'prod' || github.ref_name == 'prod' }}
+            type=raw,value=latest
+            type=raw,value=${{ steps.get_version.outputs.version }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
