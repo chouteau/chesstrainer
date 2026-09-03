@@ -34,21 +34,27 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
 
 ### 2. ⚡ L'Entraîneur de pièges d'ouverture (`/`)
 - **Mise en situation réelle** : jouez les coups clés de votre camp contre les répliques automatiques de l'adversaire.
-- **26 chapitres & 17 exercices interactifs** inspirés des études pédagogiques de Lichess.
+- **Inspiré des pièges de Lichess** : le système d'entraînement et les lignes tactiques sont inspirés des études pédagogiques de référence de la plateforme open-source [Lichess.org](https://lichess.org).
+- **79 exercices interactifs dédoublonnés** issus des recueils majeurs de Lichess (*« Brilliant Opening Traps »*, *« 64 simple opening traps »* et *« 100 Traps in chess to use »*), intégrant tous les grands pièges historiques, gambits tranchants et variantes originales (atomique, roi de la colline, échecs 960).
 - **Filtres stratégiques** : triez les exercices par posture (*Tous*, *Attaque*, *Défense*).
-- **Aide et progression** : indices tactiques contextuels, notation algébrique des coups, détection d'erreurs et sauvegarde de la maîtrise des lignes.
+- **Aide et progression** : indices tactiques contextuels, notation algébrique des coups, détection d'erreurs et sauvegarde locale de la maîtrise des lignes.
 
 ---
 
 ### 3. 🎯 L'Entraînement aux coordonnées (`/coordonnees`)
 - **Repérage spatial interactif** : trouvez le plus rapidement possible la case demandée (ex: *C4*, *E4*, *A1*).
-- **Niveaux d'assistance gradués** :
-  - 🟢 **Très Facile** : affichage de toutes les coordonnées sur chaque case.
+- **5 niveaux d'assistance gradués** :
+  - 🟢 **Très Facile** : affichage de toutes les coordonnées sur chaque case + cercle pulsé sur la cible.
   - 🟢 **Facile** : affichage de la coordonnée uniquement sur la case cible à cliquer.
-  - 🟡 **Moyen** : affichage des lettres en bas et des chiffres à droite en petit format.
-  - 🔴 **Difficile** : échiquier nu (aucune coordonnée affichée).
-- **Orientation du plateau** : basculement vue des Blancs ou vue des Noirs (inversé).
-- **Modes de jeu** : entraînement continu ou défi chrono de 30 secondes avec statistiques (score, série, record, précision).
+  - 🔵 **Intermédiaire** : lignes guidées animées qui avancent vers le croisement en 6 secondes (le point est perdu si les lignes se touchent avant le clic !).
+  - 🟡 **Moyen** : affichage des repères en rouge et plus gros sur les bords du plateau (lettres en bas, chiffres à droite).
+  - 🔴 **Difficile** : échiquier nu (aucun repère visuel).
+- **Restitution personnalisée** :
+  - 👁️ **Visuel** : affichage textuel de la case cible, voix muette.
+  - 🔊 **Vocal** : annonce vocale de la case en français (la coordonnée reste masquée pour faire travailler l'oreille, bouton réécouter inclus).
+  - 👁️+🔊 **Les 2** (par défaut) : affichage visuel combiné à l'annonce sonore.
+- **Orientation du plateau** : basculement vue des Blancs (a1 en bas à gauche) ou vue des Noirs (inversé).
+- **Modes de jeu** : entraînement continu ou défi chrono de 30 secondes avec statistiques complètes (score, série, record, précision).
 
 ![Entraîneur de pièges tactiques](docs/images/chess-trainer-traps.png)
 
@@ -131,6 +137,17 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 L'application sera automatiquement exposée et sécurisée sur votre nom de domaine configuré (`https://chesstrainer.chouteau.info`).
+
+---
+
+## 📚 Sources & Inspiration
+
+Le système d'entraînement aux pièges et d'apprentissage des ouvertures de **ChessTrainer** puise ses fondations et s'inspire des études pédagogiques de la communauté open-source [Lichess.org](https://lichess.org) :
+- **Pièges d'ouverture** :
+  - [*« Brilliant Opening Traps »* par FlamingHawk3000](https://lichess.org/study/TFiJoHCF)
+  - [*« 64 simple opening traps »* par Lennart Oelschläger](https://lichess.org/study/w6QbRFSH)
+  - [*« 100 Traps in chess to use »* par Arjun Roy](https://lichess.org/study/Lg3Qgggs)
+- **Quiz des ouvertures** : inspiré de l'étude didactique [« 25 ouvertures d’échecs »](https://lichess.org/study/XEOOZt7Z).
 
 ---
 

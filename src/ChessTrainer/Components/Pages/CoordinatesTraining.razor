@@ -1,5 +1,6 @@
 @page "/coordonnees"
 @implements IDisposable
+@inject IJSRuntime JS
 
 <PageTitle>Entraînement aux coordonnées · ChessTrainer</PageTitle>
 
@@ -241,9 +242,59 @@
                 else
                 {
                     <div class="target-card">
-                        <span class="eyebrow">Case à trouver</span>
+                        <div class="target-card-header">
+                            <span class="eyebrow">Case à trouver</span>
+
+                            <div class="prompt-mode-switcher" role="radiogroup" aria-label="Mode de restitution de la case">
+                                <button type="button"
+                                        class="@(promptMode == CoordinatePromptMode.Visual ? "active" : null)"
+                                        @onclick="() => SetPromptMode(CoordinatePromptMode.Visual)"
+                                        title="Affichage visuel uniquement (vocal muet)">
+                                    👁️ Visuel
+                                </button>
+                                <button type="button"
+                                        class="@(promptMode == CoordinatePromptMode.Audio ? "active" : null)"
+                                        @onclick="() => SetPromptMode(CoordinatePromptMode.Audio)"
+                                        title="Annonce vocale uniquement (coordonnée masquée)">
+                                    🔊 Vocal
+                                </button>
+                                <button type="button"
+                                        class="@(promptMode == CoordinatePromptMode.Both ? "active" : null)"
+                                        @onclick="() => SetPromptMode(CoordinatePromptMode.Both)"
+                                        title="Visuel et vocal">
+                                    Les 2
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="target-display">
-                            <span class="target-square-label">@targetSquare.ToUpperInvariant()</span>
+                            @if (promptMode == CoordinatePromptMode.Audio)
+                            {
+                                <button type="button"
+                                        class="target-audio-btn"
+                                        @onclick="PlayVocalTarget"
+                                        title="Cliquer pour réécouter l'annonce vocale"
+                                        aria-label="Réécouter la coordonnée demandée">
+                                    <span class="audio-wave-icon">🔊</span>
+                                    <span class="audio-listen-text">Écoute... (cliquer pour réécouter)</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="target-square-wrapper">
+                                    <span class="target-square-label">@targetSquare.ToUpperInvariant()</span>
+                                    @if (promptMode == CoordinatePromptMode.Both)
+                                    {
+                                        <button type="button"
+                                                class="target-audio-replay-mini"
+                                                @onclick="PlayVocalTarget"
+                                                title="Réécouter l'annonce vocale"
+                                                aria-label="Réécouter la coordonnée demandée">
+                                            🔊
+                                        </button>
+                                    }
+                                </div>
+                            }
                         </div>
 
                         @if (displayMode == CoordinateDisplayMode.CrossLines && (!isTimedMode || timerActive) && !isTimedSessionFinished)
@@ -310,8 +361,16 @@
         Black
     }
 
+    public enum CoordinatePromptMode
+    {
+        Both,
+        Visual,
+        Audio
+    }
+
     private CoordinateDisplayMode displayMode = CoordinateDisplayMode.BorderRightBottom;
     private BoardOrientation orientation = BoardOrientation.White;
+    private CoordinatePromptMode promptMode = CoordinatePromptMode.Both;
     private bool isTimedMode;
     private bool timerActive;
     private bool isTimedSessionFinished;
@@ -384,6 +443,10 @@
         isTimedSessionFinished = false;
         timeLeft = 30;
         StartIntermediateRoundTimer();
+        if (promptMode != CoordinatePromptMode.Visual)
+        {
+            _ = PlayVocalTarget();
+        }
 
         timer?.Dispose();
         timer = new System.Threading.Timer(_ =>
@@ -401,6 +464,13 @@
                     timerActive = false;
                     isTimedSessionFinished = true;
                     intermediateCts?.Cancel();
+                    try
+                    {
+                        _ = JS.InvokeVoidAsync("speechHelper.cancel");
+                    }
+                    catch
+                    {
+                    }
                     timer?.Dispose();
                     timer = null;
                     StateHasChanged();
@@ -516,6 +586,57 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && promptMode != CoordinatePromptMode.Visual && !isTimedMode)
+        {
+            await PlayVocalTarget();
+        }
+    }
+
+    private async Task SetPromptMode(CoordinatePromptMode mode)
+    {
+        promptMode = mode;
+        if (promptMode == CoordinatePromptMode.Visual)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("speechHelper.cancel");
+            }
+            catch
+            {
+            }
+        }
+        else if (!isTimedMode || timerActive)
+        {
+            await PlayVocalTarget();
+        }
+    }
+
+    private async Task PlayVocalTarget()
+    {
+        if (promptMode == CoordinatePromptMode.Visual)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("speechHelper.cancel");
+            }
+            catch
+            {
+            }
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("speechHelper.speakCoordinate", targetSquare);
+        }
+        catch
+        {
+            // Ignorer si la synthèse vocale est indisponible
+        }
+    }
+
     private void GenerateNextTarget()
     {
         string next;
@@ -528,6 +649,11 @@
 
         targetSquare = next;
         targetRound++;
+
+        if (promptMode != CoordinatePromptMode.Visual && (!isTimedMode || timerActive))
+        {
+            _ = PlayVocalTarget();
+        }
     }
 
     private void SkipTarget()
@@ -629,5 +755,12 @@
         timer?.Dispose();
         intermediateCts?.Cancel();
         intermediateCts?.Dispose();
+        try
+        {
+            _ = JS.InvokeVoidAsync("speechHelper.cancel");
+        }
+        catch
+        {
+        }
     }
 }

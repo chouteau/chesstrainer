@@ -2141,6 +2141,127 @@ a {
     box-shadow: 0 8px 24px rgba(27, 43, 34, .25);
 }
 
+/* Commutateur mode restitution (Visuel / Vocal / Les 2) dans target-card */
+.target-card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.prompt-mode-switcher {
+    display: inline-flex;
+    background: #e7e5dc;
+    border: 1px solid #d5d1c4;
+    border-radius: 12px;
+    padding: 3px;
+    gap: 2px;
+}
+
+.prompt-mode-switcher button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-family: "Manrope", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all .15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.prompt-mode-switcher button:hover {
+    color: var(--forest);
+}
+
+.prompt-mode-switcher button.active {
+    background: var(--paper);
+    color: var(--forest);
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+/* Bouton pour mode vocal seul */
+.target-audio-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 24px;
+    background: var(--forest);
+    color: #f7f9f3;
+    border: 0;
+    border-radius: 16px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(27, 43, 34, .25);
+    transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+    min-width: 200px;
+}
+
+.target-audio-btn:hover {
+    transform: translateY(-2px);
+    background: #254030;
+    box-shadow: 0 12px 28px rgba(27, 43, 34, .32);
+}
+
+.audio-wave-icon {
+    font-size: 38px;
+    line-height: 1;
+    margin-bottom: 6px;
+    animation: speakerPulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes speakerPulse {
+    from {
+        transform: scale(0.95);
+    }
+    to {
+        transform: scale(1.1);
+    }
+}
+
+.audio-listen-text {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.92;
+    letter-spacing: .02em;
+}
+
+/* Wrapper pour affichage avec bouton de réécoute mini */
+.target-square-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.target-audio-replay-mini {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--forest);
+    font-size: 17px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .15s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+}
+
+.target-audio-replay-mini:hover {
+    transform: scale(1.1);
+    background: #e9ece7;
+    border-color: rgba(27, 43, 34, .3);
+}
+
 .feedback-badge {
     display: inline-block;
     padding: 6px 14px;
