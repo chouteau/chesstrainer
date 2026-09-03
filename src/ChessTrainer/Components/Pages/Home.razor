@@ -1,0 +1,197 @@
+@page "/"
+@using ChessTrainer.Models
+@using ChessTrainer.Services
+@using ChessTrainer.Components.Shared
+@inject TrainerCatalog Catalog
+@inject IJSRuntime JS
+
+<PageTitle>ChessCoach · Entraîneur d’échecs</PageTitle>
+
+<div class="app-shell">
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Accueil ChessCoach">
+            <span class="brand-mark">♞</span>
+            <span>CHESS<span>COACH</span></span>
+        </a>
+
+        <nav class="main-nav" aria-label="Navigation principale">
+            <a class="active" href="/">Pièges</a>
+            <a href="/quiz">Quiz des ouvertures</a>
+            <a href="#catalogue">Catalogue</a>
+            <a href="#progression">Progression</a>
+        </nav>
+
+        <div class="header-stats">
+            <div>
+                <small>Maîtrisés</small>
+                <strong>@completed.Count<span>/17</span></strong>
+            </div>
+            <div class="header-progress" aria-label="@CompletionPercent pour cent terminé">
+                <span style="width: @CompletionPercent%"></span>
+            </div>
+            <button class="profile-button" title="Profil local">MC</button>
+        </div>
+    </header>
+
+    <div class="workspace">
+        <aside class="sidebar" id="catalogue">
+            <div class="sidebar-heading">
+                <div>
+                    <span class="eyebrow">Bibliothèque</span>
+                    <h1>Pièges d’ouverture</h1>
+                </div>
+                <span class="chapter-count">@TrainerCatalog.SourceChapterCount chap.</span>
+            </div>
+
+            <div class="filter-tabs" role="tablist" aria-label="Filtrer les exercices">
+                @foreach (var filter in Filters)
+                {
+                    <button class="@(activeFilter == filter ? "active" : null)"
+                            @onclick="() => SetFilter(filter)">
+                        @filter
+                    </button>
+                }
+            </div>
+
+            <div class="trap-list">
+                @foreach (var trap in FilteredExercises)
+                {
+                    <button class="trap-item @(selected.Id == trap.Id ? "active" : null) @(completed.Contains(trap.Id) ? "completed" : null)"
+                            @onclick="() => SelectExercise(trap)">
+                        <span class="trap-number">
+                            @(completed.Contains(trap.Id) ? "✓" : trap.Id.ToString("00"))
+                        </span>
+                        <span class="trap-copy">
+                            <strong>@trap.ShortTitle</strong>
+                            <small>@trap.Opening · @trap.Category</small>
+                        </span>
+                        <span class="trap-chevron">›</span>
+                    </button>
+                }
+            </div>
+
+            <button class="random-button" @onclick="SelectRandom">
+                <span>⤨</span>
+                Piège aléatoire
+            </button>
+
+            <a class="source-link" href="@TrainerCatalog.StudyUrl" target="_blank" rel="noopener">
+                Source : étude Lichess · 26 chapitres ↗
+            </a>
+        </aside>
+
+        <main class="content">
+            <section class="hero-strip">
+                <div>
+                    <span class="eyebrow">@selected.Category · @selected.Variant</span>
+                    <h2>Lis la position. Déclenche le piège.</h2>
+                    <p>Joue les coups de ton camp ; l’adversaire reproduit automatiquement la ligne du chapitre.</p>
+                </div>
+                <div class="hero-metric">
+                    <span>@selected.UserMoveCount</span>
+                    <small>coups à trouver</small>
+                </div>
+            </section>
+
+            <ChessBoard @key="selected.Id"
+                        Exercise="selected"
+                        OnCompleted="MarkCompletedAsync" />
+
+            <section class="progress-overview" id="progression">
+                <div class="progress-copy">
+                    <span class="eyebrow">Progression personnelle</span>
+                    <h2>@completed.Count piège@(completed.Count == 1 ? "" : "s") maîtrisé@(completed.Count == 1 ? "" : "s")</h2>
+                    <p>La progression est conservée dans ce navigateur. Rejoue une ligne sans indice pour transformer la mémorisation en réflexe.</p>
+                </div>
+                <div class="progress-cards">
+                    <article>
+                        <span class="progress-icon attack">♗</span>
+                        <div>
+                            <small>Attaque</small>
+                            <strong>@CompletedFor("Attaque") / @Catalog.Exercises.Count(x => x.Category == "Attaque")</strong>
+                        </div>
+                    </article>
+                    <article>
+                        <span class="progress-icon defense">♞</span>
+                        <div>
+                            <small>Défense</small>
+                            <strong>@CompletedFor("Défense") / @Catalog.Exercises.Count(x => x.Category == "Défense")</strong>
+                        </div>
+                    </article>
+                    <article>
+                        <span class="progress-icon variant">⚛</span>
+                        <div>
+                            <small>Variantes</small>
+                            <strong>@Catalog.Exercises.Count(x => completed.Contains(x.Id) && x.Variant != "Classique") / 3</strong>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+@code {
+    private static readonly string[] Filters = ["Tous", "Attaque", "Défense"];
+    private readonly HashSet<int> completed = [];
+    private TrapExercise selected = default!;
+    private string activeFilter = "Tous";
+    private bool progressLoaded;
+
+    private IEnumerable<TrapExercise> FilteredExercises =>
+        activeFilter == "Tous"
+            ? Catalog.Exercises
+            : Catalog.Exercises.Where(x => x.Category == activeFilter);
+
+    private int CompletionPercent => completed.Count * 100 / Catalog.Exercises.Count;
+
+    protected override void OnInitialized() => selected = Catalog.Exercises[0];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || progressLoaded)
+        {
+            return;
+        }
+
+        progressLoaded = true;
+        var stored = await JS.InvokeAsync<int[]?>("trainerStorage.loadCompleted");
+        if (stored is not null)
+        {
+            completed.UnionWith(stored.Where(id => id is >= 1 and <= 17));
+            StateHasChanged();
+        }
+    }
+
+    private void SetFilter(string filter)
+    {
+        activeFilter = filter;
+        if (!FilteredExercises.Contains(selected))
+        {
+            selected = FilteredExercises.First();
+        }
+    }
+
+    private void SelectExercise(TrapExercise exercise) => selected = exercise;
+
+    private void SelectRandom()
+    {
+        var candidates = FilteredExercises.Where(x => x.Id != selected.Id).ToArray();
+        if (candidates.Length > 0)
+        {
+            selected = candidates[Random.Shared.Next(candidates.Length)];
+        }
+    }
+
+    private async Task MarkCompletedAsync(int id)
+    {
+        if (completed.Add(id))
+        {
+            await JS.InvokeVoidAsync("trainerStorage.saveCompleted", completed.Order().ToArray());
+            StateHasChanged();
+        }
+    }
+
+    private int CompletedFor(string category) =>
+        Catalog.Exercises.Count(x => x.Category == category && completed.Contains(x.Id));
+}

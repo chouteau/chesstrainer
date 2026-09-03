@@ -1,0 +1,97 @@
+@using ChessTrainer.Chess
+
+<div class="chessboard quiz-position-board" aria-label="Position d’ouverture à identifier">
+    @foreach (var square in DisplaySquares())
+    {
+        var piece = board[square];
+        <div class="@SquareClass(square)" aria-label="@SquareAriaLabel(square, piece)">
+            @if (ShowCoordinates(square, out var fileLabel, out var rankLabel))
+            {
+                @if (fileLabel is not null)
+                {
+                    <span class="coord file">@fileLabel</span>
+                }
+                @if (rankLabel is not null)
+                {
+                    <span class="coord rank">@rankLabel</span>
+                }
+            }
+            @if (piece is not null)
+            {
+                <span class="piece @(char.IsUpper(piece.Value) ? "white-piece" : "black-piece")">
+                    @PieceGlyph(piece.Value)
+                </span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<string> Moves { get; set; }
+
+    private BoardState board = BoardState.FromFen(BoardState.StartFen);
+    private IReadOnlyList<string>? loadedMoves;
+    private string? lastFrom;
+    private string? lastTo;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(loadedMoves, Moves))
+        {
+            return;
+        }
+
+        board = BoardState.FromFen(BoardState.StartFen);
+        foreach (var move in Moves)
+        {
+            board.Apply(move);
+        }
+
+        var lastMove = Moves.LastOrDefault();
+        lastFrom = lastMove?[..2];
+        lastTo = lastMove?.Substring(2, 2);
+        loadedMoves = Moves;
+    }
+
+    private static IEnumerable<string> DisplaySquares()
+    {
+        foreach (var rank in Enumerable.Range(1, 8).Reverse())
+        {
+            foreach (var file in Enumerable.Range(0, 8))
+            {
+                yield return $"{(char)('a' + file)}{rank}";
+            }
+        }
+    }
+
+    private string SquareClass(string square)
+    {
+        var index = BoardState.ToIndex(square);
+        var isLight = ((index % 8) + (index / 8)) % 2 == 1;
+        var classes = $"square {(isLight ? "light" : "dark")}";
+        if (square == lastFrom || square == lastTo)
+        {
+            classes += " last-move";
+        }
+
+        return classes;
+    }
+
+    private static bool ShowCoordinates(string square, out string? file, out string? rank)
+    {
+        file = square[1] == '1' ? square[0].ToString() : null;
+        rank = square[0] == 'a' ? square[1].ToString() : null;
+        return file is not null || rank is not null;
+    }
+
+    private static string PieceGlyph(char piece) => piece switch
+    {
+        'K' => "♔", 'Q' => "♕", 'R' => "♖", 'B' => "♗", 'N' => "♘", 'P' => "♙",
+        'k' => "♚", 'q' => "♛", 'r' => "♜", 'b' => "♝", 'n' => "♞", 'p' => "♟",
+        _ => ""
+    };
+
+    private static string SquareAriaLabel(string square, char? piece) =>
+        piece is null ? $"Case {square}, vide" : $"Case {square}, pièce {PieceGlyph(piece.Value)}";
+}

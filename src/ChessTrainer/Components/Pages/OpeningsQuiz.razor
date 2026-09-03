@@ -1,0 +1,241 @@
+@page "/quiz"
+@using ChessTrainer.Models
+@using ChessTrainer.Services
+@using ChessTrainer.Components.Shared
+@inject OpeningQuizCatalog Catalog
+
+<PageTitle>Quiz des ouvertures · ChessCoach</PageTitle>
+
+<div class="app-shell quiz-page">
+    <header class="topbar quiz-topbar">
+        <a class="brand" href="/" aria-label="Accueil ChessCoach">
+            <span class="brand-mark">♞</span>
+            <span>CHESS<span>COACH</span></span>
+        </a>
+
+        <nav class="main-nav" aria-label="Navigation principale">
+            <a href="/">Pièges</a>
+            <a class="active" href="/quiz">Quiz des ouvertures</a>
+        </nav>
+
+        <div class="quiz-header-score">
+            <small>Score</small>
+            <strong>@score <span>point@(score == 1 ? "" : "s")</span></strong>
+        </div>
+    </header>
+
+    <main class="quiz-content">
+        <section class="quiz-intro">
+            <div>
+                <span class="eyebrow">Reconnaissance visuelle</span>
+                <h1>Quelle est cette ouverture&nbsp;?</h1>
+                <p>Observe la structure de pions et le développement des pièces, puis choisis une réponse.</p>
+            </div>
+            <div class="quiz-session-stats">
+                <div>
+                    <small>Question</small>
+                    <strong>@CurrentQuestionNumber<span>/@Catalog.Questions.Count</span></strong>
+                </div>
+                <div>
+                    <small>Série</small>
+                    <strong>@streak <span>✓</span></strong>
+                </div>
+            </div>
+        </section>
+
+        @if (isFinished)
+        {
+            <section class="quiz-finished">
+                <span class="result-knight">♞</span>
+                <span class="eyebrow">Session terminée</span>
+                <h2>@score / @Catalog.Questions.Count</h2>
+                <p>@ResultMessage</p>
+                <button class="primary-button" @onclick="StartQuiz">Recommencer le quiz</button>
+                <a href="/" class="quiz-back-link">Revenir aux pièges</a>
+            </section>
+        }
+        else
+        {
+            <section class="quiz-stage">
+                <div class="quiz-board-panel">
+                    <div class="quiz-board-topline">
+                        <div class="position-status">
+                            <span class="last-move-label">
+                                Dernier coup <strong>@LastMoveNotation</strong>
+                            </span>
+                            <span class="side-to-move">
+                                <i class="side-dot @(IsWhiteToMove ? "white" : "black")"></i>
+                                Trait aux @(IsWhiteToMove ? "Blancs" : "Noirs")
+                            </span>
+                        </div>
+                        <span class="level-pill @LevelClass">@question.Level</span>
+                    </div>
+                    <PositionBoard @key="question.Id" Moves="question.Moves" />
+                    <div class="position-clue">
+                        <span>♙</span>
+                        <p>Identifie d’abord le premier coup, puis la structure caractéristique.</p>
+                    </div>
+                </div>
+
+                <div class="quiz-answer-panel">
+                    <div class="question-number">Question @CurrentQuestionNumber</div>
+                    <h2>Choisis le nom de l’ouverture</h2>
+                    <div class="answer-list">
+                        @foreach (var choice in choices)
+                        {
+                            <button class="answer-option @AnswerClass(choice)"
+                                    disabled="@answeredCurrent"
+                                    @onclick="() => SelectAnswer(choice)">
+                                <span class="answer-letter">@AnswerLetter(choice)</span>
+                                <span>@choice</span>
+                                @if (answeredCurrent && choice == question.Name)
+                                {
+                                    <span class="answer-state">✓</span>
+                                }
+                                else if (answeredCurrent && choice == selectedAnswer)
+                                {
+                                    <span class="answer-state">×</span>
+                                }
+                            </button>
+                        }
+                    </div>
+
+                    @if (answeredCurrent)
+                    {
+                        <div class="answer-explanation @(isCorrect ? "correct" : "wrong")">
+                            <div class="explanation-title">
+                                <span>@(isCorrect ? "✓" : "×")</span>
+                                <strong>@(isCorrect ? "Bonne réponse, +1 point" : $"La bonne réponse était : {question.Name}")</strong>
+                            </div>
+                            <code>@question.MoveLine</code>
+                            <p>@question.Description</p>
+                        </div>
+
+                        <button class="next-question-button" @onclick="NextQuestion">
+                            @(deck.Count == 0 ? "Voir mon résultat" : "Question suivante") <span>→</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="answer-help">Une seule réponse est correcte. Le score augmente uniquement au premier choix.</p>
+                    }
+                </div>
+            </section>
+        }
+
+        <footer class="quiz-source">
+            Catalogue basé sur
+            <a href="@OpeningQuizCatalog.StudyUrl" target="_blank" rel="noopener">l’étude Lichess « 25 ouvertures d’échecs » ↗</a>
+        </footer>
+    </main>
+</div>
+
+@code {
+    private readonly List<OpeningQuestion> deck = [];
+    private OpeningQuestion question = default!;
+    private IReadOnlyList<string> choices = [];
+    private string? selectedAnswer;
+    private bool answeredCurrent;
+    private bool isCorrect;
+    private bool isFinished;
+    private int score;
+    private int answeredCount;
+    private int streak;
+    private int CurrentQuestionNumber =>
+        Math.Min(answeredCurrent ? answeredCount : answeredCount + 1, Catalog.Questions.Count);
+    private bool IsWhiteToMove => question.Moves.Count % 2 == 0;
+    private string LastMoveNotation =>
+        question.MoveLine.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? "—";
+
+    private string LevelClass => question.Level switch
+    {
+        "Débutant" => "beginner",
+        "Intermédiaire" => "intermediate",
+        "Avancé" => "advanced",
+        _ => "expert"
+    };
+
+    private string ResultMessage => score switch
+    {
+        >= 20 => "Excellent ! Tu reconnais presque toutes les structures d’ouverture.",
+        >= 15 => "Très bon résultat. Quelques révisions suffiront pour consolider le répertoire.",
+        >= 9 => "Bonne base. Rejoue le quiz pour mieux distinguer les structures proches.",
+        _ => "Continue l’entraînement : observe surtout les premiers mouvements de pions."
+    };
+
+    protected override void OnInitialized() => StartQuiz();
+
+    private void StartQuiz()
+    {
+        score = 0;
+        answeredCount = 0;
+        streak = 0;
+        isFinished = false;
+        deck.Clear();
+        deck.AddRange(Catalog.Questions.OrderBy(_ => Random.Shared.Next()));
+        NextQuestion();
+    }
+
+    private void NextQuestion()
+    {
+        if (deck.Count == 0)
+        {
+            isFinished = true;
+            return;
+        }
+
+        question = deck[0];
+        deck.RemoveAt(0);
+        selectedAnswer = null;
+        answeredCurrent = false;
+        isCorrect = false;
+
+        var alternatives = Catalog.Questions
+            .Where(candidate => candidate.Id != question.Id)
+            .OrderBy(_ => Random.Shared.Next())
+            .Take(3)
+            .Select(candidate => candidate.Name);
+
+        choices = alternatives
+            .Append(question.Name)
+            .OrderBy(_ => Random.Shared.Next())
+            .ToArray();
+    }
+
+    private void SelectAnswer(string answer)
+    {
+        if (answeredCurrent)
+        {
+            return;
+        }
+
+        selectedAnswer = answer;
+        answeredCurrent = true;
+        answeredCount++;
+        isCorrect = answer == question.Name;
+
+        if (isCorrect)
+        {
+            score++;
+            streak++;
+        }
+        else
+        {
+            streak = 0;
+        }
+    }
+
+    private string AnswerClass(string choice)
+    {
+        if (!answeredCurrent) return "";
+        if (choice == question.Name) return "correct";
+        if (choice == selectedAnswer) return "wrong";
+        return "muted";
+    }
+
+    private string AnswerLetter(string choice)
+    {
+        var index = choices.ToList().IndexOf(choice);
+        return ((char)('A' + index)).ToString();
+    }
+}

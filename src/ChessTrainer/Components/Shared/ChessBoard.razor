@@ -1,0 +1,338 @@
+@using ChessTrainer.Chess
+@using ChessTrainer.Models
+
+<section class="trainer-shell">
+    <div class="board-column">
+        <div class="board-meta">
+            <div class="player-chip opponent">
+                <span class="player-dot"></span>
+                Adversaire
+            </div>
+            <span class="turn-label">@TurnLabel</span>
+        </div>
+
+        <div class="chessboard @(Exercise.IsWhite ? "white-side" : "black-side")"
+             aria-label="Échiquier, orientation @(Exercise.IsWhite ? "blancs" : "noirs")">
+            @foreach (var square in DisplaySquares())
+            {
+                var piece = board[square];
+                <button class="@SquareClass(square)"
+                        aria-label="@SquareAriaLabel(square, piece)"
+                        @onclick="() => SelectSquareAsync(square)">
+                    @if (ShowCoordinates(square, out var fileLabel, out var rankLabel))
+                    {
+                        @if (fileLabel is not null)
+                        {
+                            <span class="coord file">@fileLabel</span>
+                        }
+                        @if (rankLabel is not null)
+                        {
+                            <span class="coord rank">@rankLabel</span>
+                        }
+                    }
+                    @if (piece is not null)
+                    {
+                        <span class="piece @(char.IsUpper(piece.Value) ? "white-piece" : "black-piece")">
+                            @PieceGlyph(piece.Value)
+                        </span>
+                    }
+                    @if (selectedSquare == square)
+                    {
+                        <span class="selection-ring"></span>
+                    }
+                    @if (hintVisible && ExpectedTarget == square)
+                    {
+                        <span class="hint-dot"></span>
+                    }
+                </button>
+            }
+        </div>
+
+        <div class="board-meta bottom">
+            <div class="player-chip me">
+                <span class="player-dot"></span>
+                Toi · @(Exercise.IsWhite ? "Blancs" : "Noirs")
+            </div>
+            <button class="icon-button" title="Recommencer" @onclick="Reset">↻</button>
+        </div>
+    </div>
+
+    <aside class="lesson-panel">
+        <div class="lesson-topline">
+            <span class="eyebrow">Exercice @Exercise.Id / 17</span>
+            <span class="difficulty @DifficultyClass">@Exercise.Difficulty</span>
+        </div>
+
+        <h2>@Exercise.ShortTitle</h2>
+        <div class="lesson-tags">
+            <span>@Exercise.Opening</span>
+            <span>@Exercise.SideLabel</span>
+            @if (Exercise.Variant != "Classique")
+            {
+                <span class="variant-tag">@Exercise.Variant</span>
+            }
+        </div>
+
+        <div class="instruction-card @(isComplete ? "success" : feedbackKind)">
+            <span class="instruction-icon">@(isComplete ? "✓" : feedbackKind == "error" ? "×" : "♞")</span>
+            <div>
+                <small>@(isComplete ? "Ligne maîtrisée" : waitingForOpponent ? "Réponse adverse" : "À toi de jouer")</small>
+                <p>@Feedback</p>
+            </div>
+        </div>
+
+        <div class="line-progress">
+            <div class="line-progress-header">
+                <span>Progression de la ligne</span>
+                <strong>@UserMovesPlayed / @Exercise.UserMoveCount</strong>
+            </div>
+            <div class="progress-track">
+                <span style="width: @ProgressPercent%"></span>
+            </div>
+        </div>
+
+        <div class="moves-panel">
+            <div class="moves-heading">
+                <span>Coups joués</span>
+                <span class="mistakes">@mistakes erreur@(mistakes == 1 ? "" : "s")</span>
+            </div>
+            @if (playedMoves.Count == 0)
+            {
+                <p class="empty-moves">La notation apparaîtra au fil de l’exercice.</p>
+            }
+            else
+            {
+                <div class="move-grid">
+                    @for (var index = 0; index < playedMoves.Count; index += 2)
+                    {
+                        <span class="move-number">@(index / 2 + 1).</span>
+                        <span>@playedMoves[index]</span>
+                        <span>@(index + 1 < playedMoves.Count ? playedMoves[index + 1] : "…")</span>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (Exercise.Variant == "Échecs atomiques")
+        {
+            <p class="variant-note">Le parcours mémorise ici la ligne des échecs atomiques. L’explosion finale est signalée par le mat, sans animation des pièces adjacentes.</p>
+        }
+
+        <div class="lesson-actions">
+            <button class="secondary-button" @onclick="ShowHint" disabled="@isComplete">
+                <span>✦</span> Indice
+            </button>
+            <button class="primary-button" @onclick="Reset">Recommencer</button>
+        </div>
+    </aside>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public required TrapExercise Exercise { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnCompleted { get; set; }
+
+    private BoardState board = new();
+    private int moveIndex;
+    private int mistakes;
+    private string? selectedSquare;
+    private string? lastFrom;
+    private string? lastTo;
+    private bool hintVisible;
+    private bool waitingForOpponent;
+    private bool isComplete;
+    private string feedbackKind = "";
+    private string Feedback = "";
+    private readonly List<string> playedMoves = [];
+    private int loadedExerciseId;
+
+    private string DifficultyClass => Exercise.Difficulty switch
+    {
+        "Facile" => "easy",
+        "Intermédiaire" => "medium",
+        "Difficile" => "hard",
+        "Terrifiant" => "scary",
+        "Ultra-rapide" => "bullet",
+        _ => "variant"
+    };
+
+    private int UserMovesPlayed => Math.Min((moveIndex + 1) / 2, Exercise.UserMoveCount);
+    private int ProgressPercent => Exercise.UserMoveCount == 0 ? 0 : UserMovesPlayed * 100 / Exercise.UserMoveCount;
+    private string? ExpectedTarget => moveIndex < Exercise.Moves.Count ? Exercise.Moves[moveIndex].Uci.Substring(2, 2) : null;
+    private string TurnLabel => isComplete ? "Terminé" : waitingForOpponent ? "Réflexion…" : "À toi";
+
+    protected override void OnParametersSet()
+    {
+        if (loadedExerciseId == Exercise.Id)
+        {
+            return;
+        }
+
+        loadedExerciseId = Exercise.Id;
+        Reset();
+    }
+
+    private void Reset()
+    {
+        board = BoardState.FromFen(Exercise.InitialFen);
+        moveIndex = 0;
+        mistakes = 0;
+        selectedSquare = null;
+        lastFrom = null;
+        lastTo = null;
+        hintVisible = false;
+        waitingForOpponent = false;
+        isComplete = false;
+        feedbackKind = "";
+        Feedback = $"Trouve le premier coup du piège en {Exercise.UserMoveCount} étape{(Exercise.UserMoveCount > 1 ? "s" : "")}.";
+        playedMoves.Clear();
+    }
+
+    private async Task SelectSquareAsync(string square)
+    {
+        if (waitingForOpponent || isComplete || moveIndex >= Exercise.Moves.Count)
+        {
+            return;
+        }
+
+        var expected = Exercise.Moves[moveIndex];
+        var expectedFrom = expected.Uci[..2];
+
+        if (selectedSquare is null)
+        {
+            if (square != expectedFrom)
+            {
+                mistakes++;
+                feedbackKind = "error";
+                Feedback = "Cette pièce ne déclenche pas la combinaison. Cherche la menace principale.";
+                return;
+            }
+
+            selectedSquare = square;
+            feedbackKind = "";
+            Feedback = "Pièce sélectionnée. Choisis sa case d’arrivée.";
+            return;
+        }
+
+        if (selectedSquare == square)
+        {
+            selectedSquare = null;
+            return;
+        }
+
+        var attemptedMove = selectedSquare + square;
+        if (!expected.Uci.StartsWith(attemptedMove, StringComparison.Ordinal))
+        {
+            mistakes++;
+            selectedSquare = null;
+            feedbackKind = "error";
+            Feedback = "Pas tout à fait. Observe les pièces non protégées et les lignes vers le roi.";
+            return;
+        }
+
+        ApplyMove(expected);
+        hintVisible = false;
+        selectedSquare = null;
+        feedbackKind = "";
+
+        if (moveIndex >= Exercise.Moves.Count)
+        {
+            await CompleteAsync();
+            return;
+        }
+
+        waitingForOpponent = true;
+        Feedback = "Bon coup. L’adversaire répond…";
+        await Task.Delay(420);
+
+        var reply = Exercise.Moves[moveIndex];
+        ApplyMove(reply);
+        waitingForOpponent = false;
+
+        if (moveIndex >= Exercise.Moves.Count)
+        {
+            await CompleteAsync();
+            return;
+        }
+
+        Feedback = "À toi de poursuivre la combinaison.";
+    }
+
+    private void ApplyMove(TrapMove move)
+    {
+        lastFrom = move.Uci[..2];
+        lastTo = move.Uci.Substring(2, 2);
+        board.Apply(move.Uci);
+        playedMoves.Add(move.San);
+        moveIndex++;
+    }
+
+    private async Task CompleteAsync()
+    {
+        isComplete = true;
+        waitingForOpponent = false;
+        feedbackKind = "success";
+        Feedback = mistakes == 0
+            ? "Parfait, ligne exécutée sans erreur."
+            : $"Piège terminé avec {mistakes} erreur{(mistakes == 1 ? "" : "s")}. Rejoue-le pour l’ancrer.";
+        await OnCompleted.InvokeAsync(Exercise.Id);
+    }
+
+    private void ShowHint()
+    {
+        if (moveIndex >= Exercise.Moves.Count)
+        {
+            return;
+        }
+
+        hintVisible = true;
+        feedbackKind = "";
+        Feedback = Exercise.Moves[moveIndex].Hint;
+    }
+
+    private IEnumerable<string> DisplaySquares()
+    {
+        var ranks = Exercise.IsWhite ? Enumerable.Range(1, 8).Reverse() : Enumerable.Range(1, 8);
+        var files = Exercise.IsWhite ? Enumerable.Range(0, 8) : Enumerable.Range(0, 8).Reverse();
+
+        foreach (var rank in ranks)
+        {
+            foreach (var file in files)
+            {
+                yield return $"{(char)('a' + file)}{rank}";
+            }
+        }
+    }
+
+    private string SquareClass(string square)
+    {
+        var index = BoardState.ToIndex(square);
+        var isLight = ((index % 8) + (index / 8)) % 2 == 1;
+        var classes = $"square {(isLight ? "light" : "dark")}";
+        if (square == selectedSquare) classes += " selected";
+        if (square == lastFrom || square == lastTo) classes += " last-move";
+        if (hintVisible && square == Exercise.Moves[moveIndex].Uci[..2]) classes += " hinted";
+        return classes;
+    }
+
+    private bool ShowCoordinates(string square, out string? file, out string? rank)
+    {
+        var isBottomRank = Exercise.IsWhite ? square[1] == '1' : square[1] == '8';
+        var isLeftFile = Exercise.IsWhite ? square[0] == 'a' : square[0] == 'h';
+        file = isBottomRank ? square[0].ToString() : null;
+        rank = isLeftFile ? square[1].ToString() : null;
+        return file is not null || rank is not null;
+    }
+
+    private static string PieceGlyph(char piece) => piece switch
+    {
+        'K' => "♔", 'Q' => "♕", 'R' => "♖", 'B' => "♗", 'N' => "♘", 'P' => "♙",
+        'k' => "♚", 'q' => "♛", 'r' => "♜", 'b' => "♝", 'n' => "♞", 'p' => "♟",
+        _ => ""
+    };
+
+    private static string SquareAriaLabel(string square, char? piece) =>
+        piece is null ? $"Case {square}, vide" : $"Case {square}, pièce {PieceGlyph(piece.Value)}";
+}
