@@ -1,0 +1,11 @@
+**/.git
+**/.github
+**/.vs
+**/.vscode
+**/.playwright-cli
+**/bin
+**/obj
+**/docs
+**/output
+README.md
+LICENSE

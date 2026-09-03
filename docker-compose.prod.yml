@@ -1,0 +1,33 @@
+services:
+  chesstrainer:
+    image: ghcr.io/chouteau/chesstrainer:prod
+    container_name: chesstrainer-prod
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+    labels:
+      - "traefik.enable=true"
+
+      # --- Routeur HTTP (redirection vers HTTPS) ---
+      - "traefik.http.routers.chesstrainer-http.rule=Host(`chesstrainer.chouteau.info`)"
+      - "traefik.http.routers.chesstrainer-http.entrypoints=web"
+      - "traefik.http.routers.chesstrainer-http.middlewares=chesstrainer-redirect-https"
+      - "traefik.http.middlewares.chesstrainer-redirect-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.chesstrainer-redirect-https.redirectscheme.permanent=true"
+
+      # --- Routeur HTTPS ---
+      - "traefik.http.routers.chesstrainer-https.rule=Host(`chesstrainer.chouteau.info`)"
+      - "traefik.http.routers.chesstrainer-https.entrypoints=websecure"
+      - "traefik.http.routers.chesstrainer-https.tls=true"
+      - "traefik.http.routers.chesstrainer-https.tls.certresolver=letsencrypt"
+
+      # --- Service & Port interne ---
+      - "traefik.http.services.chesstrainer.loadbalancer.server.port=8080"
+    networks:
+      - traefik-net
+
+networks:
+  traefik-net:
+    external: true
