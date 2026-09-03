@@ -59,7 +59,7 @@
 
     <aside class="lesson-panel">
         <div class="lesson-topline">
-            <span class="eyebrow">Exercice @Exercise.Id / 17</span>
+            <span class="eyebrow">Exercice @Exercise.Id / @TotalExercises</span>
             <span class="difficulty @DifficultyClass">@Exercise.Difficulty</span>
         </div>
 
@@ -133,6 +133,9 @@
 
     [Parameter]
     public EventCallback<int> OnCompleted { get; set; }
+
+    [Parameter]
+    public int TotalExercises { get; set; } = 79;
 
     private BoardState board = new();
     private int moveIndex;

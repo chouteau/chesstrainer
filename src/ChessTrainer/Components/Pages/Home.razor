@@ -25,7 +25,7 @@
         <div class="header-stats">
             <div>
                 <small>Maîtrisés</small>
-                <strong>@completed.Count<span>/17</span></strong>
+                <strong>@completed.Count<span>/@Catalog.Exercises.Count</span></strong>
             </div>
             <div class="header-progress" aria-label="@CompletionPercent pour cent terminé">
                 <span style="width: @CompletionPercent%"></span>
@@ -77,7 +77,7 @@
             </button>
 
             <a class="source-link" href="@TrainerCatalog.StudyUrl" target="_blank" rel="noopener">
-                Source : étude Lichess · 26 chapitres ↗
+                Source : études Lichess · @TrainerCatalog.SourceChapterCount chapitres ↗
             </a>
         </aside>
 
@@ -96,6 +96,7 @@
 
             <ChessBoard @key="selected.Id"
                         Exercise="selected"
+                        TotalExercises="@Catalog.Exercises.Count"
                         OnCompleted="MarkCompletedAsync" />
 
             <section class="progress-overview" id="progression">
@@ -123,7 +124,7 @@
                         <span class="progress-icon variant">⚛</span>
                         <div>
                             <small>Variantes</small>
-                            <strong>@Catalog.Exercises.Count(x => completed.Contains(x.Id) && x.Variant != "Classique") / 3</strong>
+                            <strong>@Catalog.Exercises.Count(x => completed.Contains(x.Id) && x.Variant != "Classique") / @Catalog.Exercises.Count(x => x.Variant != "Classique")</strong>
                         </div>
                     </article>
                 </div>
@@ -190,7 +191,7 @@
         var stored = await JS.InvokeAsync<int[]?>("trainerStorage.loadCompleted");
         if (stored is not null)
         {
-            completed.UnionWith(stored.Where(id => id is >= 1 and <= 17));
+            completed.UnionWith(stored.Where(id => id >= 1 && id <= Catalog.Exercises.Count));
             StateHasChanged();
         }
     }
