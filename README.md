@@ -83,6 +83,44 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
 
 ---
 
+## 🐳 Utilisation avec Docker
+
+L'application est disponible sous forme d'image de conteneur optimisée et sécurisée basée sur **Ubuntu Chiseled** (.NET 10).
+
+### 1. Exécuter l'image depuis GitHub Container Registry (GHCR)
+
+Pour lancer directement la dernière version de production hébergée sur GitHub :
+
+```bash
+docker run -d -p 8080:8080 --name chesstrainer ghcr.io/chouteau/chesstrainer:latest
+```
+
+L'application est alors accessible sur `http://localhost:8080`.
+
+### 2. Construire et exécuter l'image localement
+
+Si vous préférez builder l'image vous-même :
+
+```bash
+# Construction de l'image
+docker build -t chesstrainer:local .
+
+# Lancement du conteneur
+docker run -d -p 8080:8080 --name chesstrainer chesstrainer:local
+```
+
+### 3. Déploiement en production avec Docker Compose (Traefik & Arcane)
+
+Un fichier [`docker-compose.prod.yml`](docker-compose.prod.yml) est préconfiguré pour un déploiement sur VPS via l'orchestrateur **Arcane** derrière un reverse proxy **Traefik** avec redirection automatique HTTP vers HTTPS et certificat SSL Let's Encrypt :
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+L'application sera automatiquement exposée et sécurisée sur votre nom de domaine configuré (`https://chesstrainer.chouteau.info`).
+
+---
+
 ## 📜 Licence
 
 Ce projet est sous licence MIT. Consultez le fichier [LICENSE](LICENSE) pour plus de détails.

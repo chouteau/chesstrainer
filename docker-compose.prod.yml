@@ -1,6 +1,6 @@
 services:
   chesstrainer:
-    image: ghcr.io/chouteau/chesstrainer:prod
+    image: ghcr.io/chouteau/chesstrainer:latest
     container_name: chesstrainer-prod
     restart: unless-stopped
     environment:
