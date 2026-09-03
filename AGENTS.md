@@ -44,7 +44,7 @@ Ce document définit les directives techniques, règles de codage et standards d
 - **Exécution sécurisée** : Utilisateur non-root obligatoire (`USER $APP_UID`).
 - **Port d'écoute du conteneur** : `8080` (`ASPNETCORE_HTTP_PORTS=8080`).
 - **Reverse Proxy Traefik & Orchestrateur Arcane** :
-  - Déployé via `docker-compose.prod.yml` sur un VPS.
+  - Déployé via `docker-compose.prod.yml` sur un VPS (réseau externe `traefik-public`, certresolver `le-http`).
   - Domaine de production : `chesstrainer.chouteau.info`.
   - Toujours conserver `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` pour la gestion des en-têtes `X-Forwarded-*` et la compatibilité WebSockets/SignalR derrière Traefik.
   - Redirection automatique HTTP vers HTTPS via middleware Traefik.
