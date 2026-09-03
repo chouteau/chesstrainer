@@ -38,6 +38,18 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
 - **Filtres stratégiques** : triez les exercices par posture (*Tous*, *Attaque*, *Défense*).
 - **Aide et progression** : indices tactiques contextuels, notation algébrique des coups, détection d'erreurs et sauvegarde de la maîtrise des lignes.
 
+---
+
+### 3. 🎯 L'Entraînement aux coordonnées (`/coordonnees`)
+- **Repérage spatial interactif** : trouvez le plus rapidement possible la case demandée (ex: *C4*, *E4*, *A1*).
+- **Niveaux d'assistance gradués** :
+  - 🟢 **Très Facile** : affichage de toutes les coordonnées sur chaque case.
+  - 🟢 **Facile** : affichage de la coordonnée uniquement sur la case cible à cliquer.
+  - 🟡 **Moyen** : affichage des lettres en bas et des chiffres à droite en petit format.
+  - 🔴 **Difficile** : échiquier nu (aucune coordonnée affichée).
+- **Orientation du plateau** : basculement vue des Blancs ou vue des Noirs (inversé).
+- **Modes de jeu** : entraînement continu ou défi chrono de 30 secondes avec statistiques (score, série, record, précision).
+
 ![Entraîneur de pièges tactiques](docs/images/chess-trainer-traps.png)
 
 ---
@@ -80,6 +92,7 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
    Ouvrez votre navigateur web sur :
    - 🏠 **Pièges d'ouverture** : `http://localhost:5215` (ou port affiché dans la console)
    - ♟️ **Quiz des ouvertures** : `http://localhost:5215/quiz`
+   - 🎯 **Entraînement aux coordonnées** : `http://localhost:5215/coordonnees`
 
 ---
 

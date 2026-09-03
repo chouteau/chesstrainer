@@ -6,9 +6,10 @@ Ce document définit les directives techniques, règles de codage et standards d
 
 ## 🎯 Vue d'ensemble du projet
 - **Nom officiel** : ChessTrainer
-- **Objet** : Application web interactive d'entraînement aux échecs axée sur deux modes complémentaires :
+- **Objet** : Application web interactive d'entraînement aux échecs axée sur trois modes complémentaires :
   1. **Quiz des ouvertures** (`/quiz`) : reconnaissance visuelle de structures d'ouvertures à choix multiples.
   2. **Pièges d'ouverture** (`/`) : entraînement tactique interactif coup par coup avec réplique automatique adverse.
+  3. **Entraînement aux coordonnées** (`/coordonnees`) : repérage spatial rapide sur l'échiquier avec options d'affichage graduées (Très Facile à Difficile) et orientation Blancs/Noirs.
 
 ---
 

@@ -1,0 +1,522 @@
+@page "/coordonnees"
+@implements IDisposable
+
+<PageTitle>Entraînement aux coordonnées · ChessTrainer</PageTitle>
+
+<div class="app-shell coordinates-page">
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Accueil ChessTrainer">
+            <span class="brand-mark">♞</span>
+            <span>CHESS<span>TRAINER</span></span>
+        </a>
+
+        <nav class="main-nav" aria-label="Navigation principale">
+            <a href="/">Pièges</a>
+            <a href="/quiz">Quiz des ouvertures</a>
+            <a class="active" href="/coordonnees">Coordonnées</a>
+        </nav>
+
+        <div class="header-stats">
+            <div>
+                <small>Score</small>
+                <strong>@score <span>trouvée@(score > 1 ? "s" : "")</span></strong>
+            </div>
+            <div>
+                <small>Série</small>
+                <strong>@streak <span>✓ (max @bestStreak)</span></strong>
+            </div>
+        </div>
+    </header>
+
+    <main class="coordinates-content">
+        <section class="coordinates-intro">
+            <div>
+                <span class="eyebrow">Repérage spatial</span>
+                <h1>Entraînement aux coordonnées</h1>
+                <p>Repère et clique le plus vite possible sur la case indiquée sur l’échiquier.</p>
+            </div>
+
+            <div class="coordinates-settings-bar">
+                <div class="setting-group">
+                    <span class="setting-label">Orientation :</span>
+                    <div class="toggle-group" role="radiogroup" aria-label="Orientation du plateau">
+                        <button type="button"
+                                class="@(orientation == BoardOrientation.White ? "active" : null)"
+                                @onclick="() => SetOrientation(BoardOrientation.White)">
+                            ⚪ Blancs
+                        </button>
+                        <button type="button"
+                                class="@(orientation == BoardOrientation.Black ? "active" : null)"
+                                @onclick="() => SetOrientation(BoardOrientation.Black)">
+                            ⚫ Noirs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <span class="setting-label">Mode de jeu :</span>
+                    <div class="toggle-group" role="radiogroup" aria-label="Mode de jeu">
+                        <button type="button"
+                                class="@(!isTimedMode ? "active" : null)"
+                                @onclick="() => SetTimedMode(false)">
+                            ∞ Libre
+                        </button>
+                        <button type="button"
+                                class="@(isTimedMode ? "active" : null)"
+                                @onclick="() => SetTimedMode(true)">
+                            ⏱ Chrono 30s
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sélecteur de difficulté & niveau d'affichage -->
+        <section class="difficulty-selection" aria-label="Options d'affichage et niveaux de difficulté">
+            <span class="difficulty-title">Niveau d'aide visuelle :</span>
+            <div class="difficulty-grid">
+                <button type="button"
+                        class="diff-card @(displayMode == CoordinateDisplayMode.AllSquares ? "selected" : null)"
+                        @onclick="() => SetDisplayMode(CoordinateDisplayMode.AllSquares)">
+                    <div class="diff-card-header">
+                        <span class="diff-badge very-easy">Très Facile</span>
+                    </div>
+                    <strong>Toutes les cases</strong>
+                    <small>Affiche toutes les coordonnées et entoure la case cible</small>
+                </button>
+
+                <button type="button"
+                        class="diff-card @(displayMode == CoordinateDisplayMode.TargetOnly ? "selected" : null)"
+                        @onclick="() => SetDisplayMode(CoordinateDisplayMode.TargetOnly)">
+                    <div class="diff-card-header">
+                        <span class="diff-badge easy">Facile</span>
+                    </div>
+                    <strong>Case cible</strong>
+                    <small>Affiche la coordonnée uniquement sur la case à cliquer</small>
+                </button>
+
+                <button type="button"
+                        class="diff-card @(displayMode == CoordinateDisplayMode.CrossLines ? "selected" : null)"
+                        @onclick="() => SetDisplayMode(CoordinateDisplayMode.CrossLines)">
+                    <div class="diff-card-header">
+                        <span class="diff-badge intermediate">Intermédiaire</span>
+                    </div>
+                    <strong>Lignes guidées</strong>
+                    <small>Lignes animées (montante et venant de gauche) après quelques secondes</small>
+                </button>
+
+                <button type="button"
+                        class="diff-card @(displayMode == CoordinateDisplayMode.BorderRightBottom ? "selected" : null)"
+                        @onclick="() => SetDisplayMode(CoordinateDisplayMode.BorderRightBottom)">
+                    <div class="diff-card-header">
+                        <span class="diff-badge medium">Moyen</span>
+                    </div>
+                    <strong>Bords en petit</strong>
+                    <small>Chiffres à droite et lettres en bas en petit format</small>
+                </button>
+
+                <button type="button"
+                        class="diff-card @(displayMode == CoordinateDisplayMode.None ? "selected" : null)"
+                        @onclick="() => SetDisplayMode(CoordinateDisplayMode.None)">
+                    <div class="diff-card-header">
+                        <span class="diff-badge hard">Difficile</span>
+                    </div>
+                    <strong>Plateau nu</strong>
+                    <small>Aucune coordonnée affichée sur l'échiquier</small>
+                </button>
+            </div>
+        </section>
+
+        <section class="coordinates-workspace">
+            <!-- Colonne Échiquier -->
+            <div class="coordinates-board-column">
+                <div class="coordinates-board-meta">
+                    <div class="side-indicator">
+                        <span class="side-dot @(orientation == BoardOrientation.White ? "white" : "black")"></span>
+                        Vue des <strong>@(orientation == BoardOrientation.White ? "Blancs (a1 en bas)" : "Noirs (h8 en bas)")</strong>
+                    </div>
+
+                    @if (isTimedMode)
+                    {
+                        <div class="timer-badge @(timeLeft <= 5 ? "urgent" : null)">
+                            ⏱ @timeLeft s
+                        </div>
+                    }
+                </div>
+
+                <div class="chessboard coordinates-board @(orientation == BoardOrientation.White ? "white-side" : "black-side")"
+                     aria-label="Échiquier d'entraînement aux coordonnées">
+                    
+                    @if (displayMode == CoordinateDisplayMode.CrossLines)
+                    {
+                        <div class="guided-crosshair-container" @key="@($"{targetSquare}-{orientation}-{targetRound}")" aria-hidden="true">
+                            <div class="guided-v-line" style="left: @(TargetCenterX.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; height: @((100 - TargetCenterY).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                            <div class="guided-h-line" style="top: @(TargetCenterY.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; width: @(TargetCenterX.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                            <div class="guided-cross-point" style="left: @(TargetCenterX.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%; top: @(TargetCenterY.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%;"></div>
+                        </div>
+                    }
+
+                    @foreach (var square in DisplaySquares())
+                    {
+                        var isLight = IsLightSquare(square);
+                        var isTarget = square == targetSquare;
+                        var showFullLabel = displayMode == CoordinateDisplayMode.AllSquares || (displayMode == CoordinateDisplayMode.TargetOnly && isTarget);
+                        
+                        <button type="button"
+                                class="square @(isLight ? "light" : "dark") @SquareFeedbackClass(square)"
+                                aria-label="@SquareAriaLabel(square)"
+                                disabled="@(isTimedMode && !timerActive && isTimedSessionFinished)"
+                                @onclick="() => HandleSquareClick(square)">
+                            
+                            @if (showFullLabel)
+                            {
+                                <span class="square-full-coord @(isTarget && displayMode == CoordinateDisplayMode.TargetOnly ? "target-highlight" : null)">
+                                    @square
+                                </span>
+                            }
+
+                            @if (displayMode == CoordinateDisplayMode.AllSquares && isTarget)
+                            {
+                                <span class="target-surround-ring" aria-hidden="true"></span>
+                            }
+
+                            @if (displayMode == CoordinateDisplayMode.BorderRightBottom || displayMode == CoordinateDisplayMode.CrossLines)
+                            {
+                                @if (GetBorderCoordinates(square, out var letter, out var number))
+                                {
+                                    @if (letter is not null)
+                                    {
+                                        <span class="coord border-letter-bottom">@letter</span>
+                                    }
+                                    @if (number is not null)
+                                    {
+                                        <span class="coord border-number-right">@number</span>
+                                    }
+                                }
+                            }
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Colonne Panneau de jeu & Cible -->
+            <aside class="coordinates-action-panel">
+                @if (isTimedMode && !timerActive && !isTimedSessionFinished)
+                {
+                    <div class="action-card start-card">
+                        <span class="card-icon">⏱</span>
+                        <h2>Défi 30 secondes</h2>
+                        <p>Trouve un maximum de cases en 30 secondes ! Prépare-toi et clique sur Démarrer.</p>
+                        <button type="button" class="primary-button cta-button" @onclick="StartTimedSession">
+                            Démarrer le chrono
+                        </button>
+                        <button type="button" class="secondary-button back-to-free-button" @onclick="() => SetTimedMode(false)">
+                            Revenir au mode libre
+                        </button>
+                    </div>
+                }
+                else if (isTimedMode && isTimedSessionFinished)
+                {
+                    <div class="action-card summary-card">
+                        <span class="card-icon">🏆</span>
+                        <h2>Session terminée !</h2>
+                        <div class="summary-score">
+                            <strong>@score</strong>
+                            <span>cases trouvées en 30s</span>
+                        </div>
+                        <p>Précision globale : <strong>@Accuracy%</strong> (@totalAttempts coups tentés)</p>
+                        <div class="summary-actions">
+                            <button type="button" class="primary-button cta-button" @onclick="StartTimedSession">
+                                Rejouer le chrono 30s
+                            </button>
+                            <button type="button" class="secondary-button" @onclick="() => SetTimedMode(false)">
+                                Revenir au mode libre
+                            </button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="target-card">
+                        <span class="eyebrow">Case à trouver</span>
+                        <div class="target-display">
+                            <span class="target-square-label">@targetSquare.ToUpperInvariant()</span>
+                        </div>
+
+                        <div class="feedback-badge @FeedbackClass">
+                            @feedbackMessage
+                        </div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stat-item">
+                            <span class="stat-value">@score</span>
+                            <span class="stat-label">Réussites</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">@streak</span>
+                            <span class="stat-label">Série actuelle</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">@bestStreak</span>
+                            <span class="stat-label">Record série</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value">@Accuracy%</span>
+                            <span class="stat-label">Précision</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button type="button" class="secondary-button" @onclick="SkipTarget">
+                            Passer <span>↷</span>
+                        </button>
+                        <button type="button" class="secondary-button" @onclick="ResetSession">
+                            Réinitialiser <span>↻</span>
+                        </button>
+                    </div>
+                }
+            </aside>
+        </section>
+    </main>
+</div>
+
+@code {
+    public enum CoordinateDisplayMode
+    {
+        AllSquares,
+        TargetOnly,
+        CrossLines,
+        BorderRightBottom,
+        None
+    }
+
+    public enum BoardOrientation
+    {
+        White,
+        Black
+    }
+
+    private CoordinateDisplayMode displayMode = CoordinateDisplayMode.BorderRightBottom;
+    private BoardOrientation orientation = BoardOrientation.White;
+    private bool isTimedMode;
+    private bool timerActive;
+    private bool isTimedSessionFinished;
+    private int timeLeft = 30;
+    private System.Threading.Timer? timer;
+
+    private readonly Random random = new();
+    private string targetSquare = "e4";
+    private string? lastClickedSquare;
+    private bool? lastResult;
+    private string feedbackMessage = "Clique sur la case demandée";
+
+    private int score;
+    private int totalAttempts;
+    private int streak;
+    private int bestStreak;
+
+    private int Accuracy => totalAttempts == 0 ? 100 : (score * 100) / totalAttempts;
+
+    private string FeedbackClass => lastResult switch
+    {
+        true => "success",
+        false => "error",
+        _ => "neutral"
+    };
+
+    protected override void OnInitialized()
+    {
+        GenerateNextTarget();
+    }
+
+    private void SetDisplayMode(CoordinateDisplayMode mode)
+    {
+        displayMode = mode;
+    }
+
+    private void SetOrientation(BoardOrientation newOrientation)
+    {
+        orientation = newOrientation;
+    }
+
+    private void SetTimedMode(bool timed)
+    {
+        isTimedMode = timed;
+        ResetSession();
+    }
+
+    private void StartTimedSession()
+    {
+        ResetSession();
+        timerActive = true;
+        isTimedSessionFinished = false;
+        timeLeft = 30;
+
+        timer?.Dispose();
+        timer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                if (timeLeft > 1)
+                {
+                    timeLeft--;
+                    StateHasChanged();
+                }
+                else
+                {
+                    timeLeft = 0;
+                    timerActive = false;
+                    isTimedSessionFinished = true;
+                    timer?.Dispose();
+                    timer = null;
+                    StateHasChanged();
+                }
+            });
+        }, null, 1000, 1000);
+    }
+
+    private void ResetSession()
+    {
+        timer?.Dispose();
+        timer = null;
+        timerActive = false;
+        isTimedSessionFinished = false;
+        timeLeft = 30;
+        score = 0;
+        totalAttempts = 0;
+        streak = 0;
+        bestStreak = 0;
+        lastClickedSquare = null;
+        lastResult = null;
+        feedbackMessage = "Clique sur la case demandée";
+        GenerateNextTarget();
+    }
+
+    private int targetRound;
+
+    private double TargetCenterX
+    {
+        get
+        {
+            var colIndex = orientation == BoardOrientation.White
+                ? targetSquare[0] - 'a'
+                : 'h' - targetSquare[0];
+            return (colIndex + 0.5) * 100.0 / 8.0;
+        }
+    }
+
+    private double TargetCenterY
+    {
+        get
+        {
+            var rowIndex = orientation == BoardOrientation.White
+                ? 8 - (targetSquare[1] - '0')
+                : (targetSquare[1] - '0') - 1;
+            return (rowIndex + 0.5) * 100.0 / 8.0;
+        }
+    }
+
+    private void GenerateNextTarget()
+    {
+        string next;
+        do
+        {
+            var file = (char)('a' + random.Next(0, 8));
+            var rank = random.Next(1, 9);
+            next = $"{file}{rank}";
+        } while (next == targetSquare);
+
+        targetSquare = next;
+        targetRound++;
+    }
+
+    private void SkipTarget()
+    {
+        feedbackMessage = $"Case ignorée ({targetSquare.ToUpperInvariant()})";
+        lastResult = null;
+        lastClickedSquare = null;
+        GenerateNextTarget();
+    }
+
+    private void HandleSquareClick(string square)
+    {
+        if (isTimedMode && (!timerActive || isTimedSessionFinished))
+        {
+            return;
+        }
+
+        totalAttempts++;
+        lastClickedSquare = square;
+
+        if (square == targetSquare)
+        {
+            score++;
+            streak++;
+            if (streak > bestStreak)
+            {
+                bestStreak = streak;
+            }
+
+            lastResult = true;
+            feedbackMessage = $"Bravo ! {square.ToUpperInvariant()} trouvé.";
+            GenerateNextTarget();
+        }
+        else
+        {
+            streak = 0;
+            lastResult = false;
+            feedbackMessage = $"Erreur : tu as cliqué sur {square.ToUpperInvariant()}. Cherche {targetSquare.ToUpperInvariant()} !";
+        }
+    }
+
+    private IEnumerable<string> DisplaySquares()
+    {
+        var ranks = orientation == BoardOrientation.White ? Enumerable.Range(1, 8).Reverse() : Enumerable.Range(1, 8);
+        var files = orientation == BoardOrientation.White ? Enumerable.Range(0, 8) : Enumerable.Range(0, 8).Reverse();
+
+        foreach (var rank in ranks)
+        {
+            foreach (var file in files)
+            {
+                yield return $"{(char)('a' + file)}{rank}";
+            }
+        }
+    }
+
+    private static bool IsLightSquare(string square)
+    {
+        var fileIndex = square[0] - 'a';
+        var rankIndex = square[1] - '1';
+        return (fileIndex + rankIndex) % 2 == 1;
+    }
+
+    private string SquareFeedbackClass(string square)
+    {
+        if (square == lastClickedSquare)
+        {
+            return lastResult == true ? "coord-success-flash" : "coord-error-flash";
+        }
+
+        return "";
+    }
+
+    private bool GetBorderCoordinates(string square, out string? letter, out string? number)
+    {
+        // Lettres en bas et chiffres à droite en petit
+        var isBottomRank = orientation == BoardOrientation.White ? square[1] == '1' : square[1] == '8';
+        var isRightFile = orientation == BoardOrientation.White ? square[0] == 'h' : square[0] == 'a';
+
+        letter = isBottomRank ? square[0].ToString() : null;
+        number = isRightFile ? square[1].ToString() : null;
+
+        return letter is not null || number is not null;
+    }
+
+    private static string SquareAriaLabel(string square) => $"Case {square}";
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}
