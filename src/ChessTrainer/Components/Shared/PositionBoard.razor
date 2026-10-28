@@ -27,38 +27,55 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired]
-    public required IReadOnlyList<string> Moves { get; set; }
+    [Parameter]
+    public IReadOnlyList<string>? Moves { get; set; }
+
+    [Parameter]
+    public string? Fen { get; set; }
+
+    [Parameter]
+    public bool Flipped { get; set; }
 
     private BoardState board = BoardState.FromFen(BoardState.StartFen);
     private IReadOnlyList<string>? loadedMoves;
+    private string? loadedFen;
     private string? lastFrom;
     private string? lastTo;
 
     protected override void OnParametersSet()
     {
-        if (ReferenceEquals(loadedMoves, Moves))
+        if (!string.IsNullOrWhiteSpace(Fen) && Fen != loadedFen)
         {
+            board = BoardState.FromFen(Fen);
+            loadedFen = Fen;
+            lastFrom = null;
+            lastTo = null;
             return;
         }
 
-        board = BoardState.FromFen(BoardState.StartFen);
-        foreach (var move in Moves)
+        if (Moves != null && !ReferenceEquals(loadedMoves, Moves))
         {
-            board.Apply(move);
-        }
+            board = BoardState.FromFen(BoardState.StartFen);
+            foreach (var move in Moves)
+            {
+                board.Apply(move);
+            }
 
-        var lastMove = Moves.LastOrDefault();
-        lastFrom = lastMove?[..2];
-        lastTo = lastMove?.Substring(2, 2);
-        loadedMoves = Moves;
+            var lastMove = Moves.LastOrDefault();
+            lastFrom = lastMove?[..2];
+            lastTo = lastMove?.Substring(2, 2);
+            loadedMoves = Moves;
+        }
     }
 
-    private static IEnumerable<string> DisplaySquares()
+    private IEnumerable<string> DisplaySquares()
     {
-        foreach (var rank in Enumerable.Range(1, 8).Reverse())
+        var ranks = Flipped ? Enumerable.Range(1, 8) : Enumerable.Range(1, 8).Reverse();
+        var files = Flipped ? Enumerable.Range(0, 8).Reverse() : Enumerable.Range(0, 8);
+
+        foreach (var rank in ranks)
         {
-            foreach (var file in Enumerable.Range(0, 8))
+            foreach (var file in files)
             {
                 yield return $"{(char)('a' + file)}{rank}";
             }
