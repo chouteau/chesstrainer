@@ -1,0 +1,825 @@
+@page "/erreurs"
+@using ChessTrainer.Chess
+@using ChessTrainer.Models
+@using ChessTrainer.Models.ChessCom
+@using ChessTrainer.Services
+@using ChessTrainer.Components.Shared
+@inject ChessComService ChessComService
+@inject ChessGameStorageService StorageService
+@inject GameMistakeAnalyzer MistakeAnalyzer
+
+<PageTitle>Mes Erreurs Chess.com · ChessTrainer</PageTitle>
+
+<div class="app-shell mistakes-page">
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Accueil ChessTrainer">
+            <span class="brand-mark">♞</span>
+            <span>CHESS<span>TRAINER</span></span>
+        </a>
+
+        <nav class="main-nav" aria-label="Navigation principale">
+            <a href="/">Pièges</a>
+            <a href="/quiz">Quiz des ouvertures</a>
+            <a href="/coordonnees">Coordonnées</a>
+            <a class="active" href="/erreurs">Mes Erreurs</a>
+        </nav>
+
+        <div class="header-stats">
+            @if (activeSummary != null)
+            {
+                <div>
+                    <small>Analysées</small>
+                    <strong>@allFetchedGames.Count<span> parties</span></strong>
+                </div>
+                <div>
+                    <small>Lignes</small>
+                    <strong>@summaries.Count<span> à réviser</span></strong>
+                </div>
+            }
+            else
+            {
+                <div>
+                    <small>Mode</small>
+                    <strong>Analyse Chess.com</strong>
+                </div>
+            }
+        </div>
+    </header>
+
+    <div class="workspace">
+        <aside class="sidebar">
+            <div class="sidebar-heading">
+                <div>
+                    <span class="eyebrow">Révision personnalisée</span>
+                    <h1>Mes Erreurs</h1>
+                </div>
+            </div>
+
+            <!-- Formulaire d'import Chess.com -->
+            <div class="mistakes-import-box">
+                <label for="usernameInput" class="mistakes-label">Joueur Chess.com</label>
+                <div class="mistakes-input-row">
+                    <input id="usernameInput"
+                           type="text"
+                           class="mistakes-text-input"
+                           placeholder="Ton pseudo (ex: Magnus)"
+                           @bind="username"
+                           @bind:event="oninput"
+                           disabled="@isLoading" />
+                </div>
+
+                <div class="mistakes-controls-row">
+                    <div class="mistakes-period-wrap">
+                        <select @bind="monthsToFetch" disabled="@isLoading" class="mistakes-select">
+                            <option value="1">1 mois</option>
+                            <option value="3">3 mois</option>
+                            <option value="6">6 mois</option>
+                            <option value="12">1 an</option>
+                            <option value="0">Toutes</option>
+                        </select>
+                    </div>
+                    <button class="mistakes-submit-btn"
+                            @onclick="FetchAndAnalyzeAsync"
+                            disabled="@(isLoading || string.IsNullOrWhiteSpace(username))">
+                        @(isLoading ? "Analyse..." : "Analyser")
+                    </button>
+                </div>
+
+                <div class="mistakes-retention-pill">
+                    <span>⏱️</span>
+                    <small>Fichiers conservés 24h maxi par pseudo</small>
+                </div>
+
+                @if (hasCachedData)
+                {
+                    <div class="mistakes-cache-banner">
+                        <small>En cache (@cachedExpiration)</small>
+                        <button class="mistakes-clear-btn" @onclick="PurgeCache" title="Supprimer immédiatement les données">Purger</button>
+                    </div>
+                }
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="mistakes-loading-card">
+                    <div class="mistakes-spinner"></div>
+                    <p>@currentStatus</p>
+                    @if (totalArchives > 0)
+                    {
+                        <div class="mistakes-progress-track">
+                            <span style="width: @(downloadedArchives * 100 / totalArchives)%"></span>
+                        </div>
+                        <small>@downloadedArchives / @totalArchives mois traités</small>
+                    }
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="mistakes-error-card">
+                    <span>⚠️</span>
+                    <p>@errorMessage</p>
+                </div>
+            }
+
+            @if (summaries.Count > 0)
+            {
+                <div class="mistakes-section-tag">
+                    <span>Lignes les plus vulnérables</span>
+                </div>
+
+                <div class="mistakes-openings-scroll">
+                    @foreach (var sum in summaries)
+                    {
+                        <button class="mistakes-opening-btn @(activeSummary == sum ? "active" : null)"
+                                @onclick="() => SelectSummary(sum)">
+                            <div class="mistakes-opening-text">
+                                <strong>@sum.OpeningName</strong>
+                                <small>@(string.IsNullOrWhiteSpace(sum.Eco) ? "Ouverture" : sum.Eco) · @sum.Losses défaite@(sum.Losses > 1 ? "s" : "") / @sum.TotalGames</small>
+                            </div>
+                            <span class="mistakes-rate-pill">@sum.LossRate%</span>
+                        </button>
+                    }
+                </div>
+            }
+        </aside>
+
+        <main class="content">
+            @if (activeSummary == null)
+            {
+                <section class="mistakes-welcome-card">
+                    <div class="mistakes-welcome-icon">♟️</div>
+                    <span class="eyebrow">Diagnostic de tes parties</span>
+                    <h2>Révise les erreurs de tes propres parties</h2>
+                    <p>
+                        Indique ton pseudonyme Chess.com dans le panneau de gauche pour télécharger tes parties récentes.
+                        L'application classe automatiquement tes défaites par ouverture et te permet de rejouer le coup fatal.
+                    </p>
+                    <div class="mistakes-security-notice">
+                        🔒 <strong>Confidentialité & Rétention :</strong> Tes parties sont isolées dans un dossier temporaire
+                        <code>App_Data/cache/{pseudo}/</code> et sont purgées automatiquement après 24 heures.
+                    </div>
+                </section>
+            }
+            else
+            {
+                <section class="hero-strip">
+                    <div>
+                        <span class="eyebrow">Ligne vulnérable · @activeSummary.Eco</span>
+                        <h2>@activeSummary.OpeningName</h2>
+                        <p>@activeSummary.Losses défaite@(activeSummary.Losses > 1 ? "s" : "") identifiée@(activeSummary.Losses > 1 ? "s" : "") sur cette ouverture (@activeSummary.LossRate% du total).</p>
+                    </div>
+                    <div class="hero-metric">
+                        <span>@activeSummary.Losses</span>
+                        <small>parties à revoir</small>
+                    </div>
+                </section>
+
+                <div class="mistakes-study-shell">
+                    @if (selectedExercise != null)
+                    {
+                        <div class="mistakes-board-column">
+                            <div class="mistakes-board-topline">
+                                <div class="player-chip">
+                                    <span class="player-dot"></span>
+                                    vs <strong>@selectedExercise.OpponentName</strong> (@selectedExercise.OpponentRating)
+                                </div>
+                                <span class="mistakes-date-label">@selectedExercise.FormattedDate</span>
+                            </div>
+
+                            <PositionBoard Fen="@selectedExercise.FenBeforeMistake" Flipped="@(!selectedExercise.IsWhite)" />
+
+                            <div class="mistakes-board-bottomline">
+                                <div class="player-chip me">
+                                    <span class="player-dot"></span>
+                                    Toi · @selectedExercise.SideLabel (@selectedExercise.PlayerRating)
+                                </div>
+                            </div>
+
+                            <div class="mistakes-details-panel">
+                                <div class="mistakes-move-banner">
+                                    <div class="mistakes-bad-move">
+                                        <small>Structure au coup @selectedExercise.MoveNumber</small>
+                                        <strong>@selectedExercise.MistakeMoveSan</strong>
+                                    </div>
+                                    <div class="mistakes-result-type">
+                                        <small>Issue finale</small>
+                                        <span>@selectedExercise.ResultCode</span>
+                                    </div>
+                                </div>
+
+                                <p class="mistakes-explanation">@selectedExercise.Explanation</p>
+
+                                <div class="mistakes-footer-action">
+                                    <a class="mistakes-link-btn" href="@selectedExercise.GameUrl" target="_blank" rel="noopener">
+                                        Voir la partie complète sur Chess.com ↗
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <aside class="mistakes-list-column">
+                            <div class="mistakes-column-header">
+                                <span>Parties concernées (@activeSummary.Exercises.Count)</span>
+                            </div>
+                            <div class="mistakes-items-scroll">
+                                @for (int i = 0; i < activeSummary.Exercises.Count; i++)
+                                {
+                                    var ex = activeSummary.Exercises[i];
+                                    var idx = i + 1;
+                                    <button class="mistakes-game-card @(selectedExercise == ex ? "active" : null)"
+                                            @onclick="() => selectedExercise = ex">
+                                        <span class="mistakes-game-num">#@idx</span>
+                                        <div class="mistakes-game-info">
+                                            <strong>vs @ex.OpponentName (@ex.OpponentRating)</strong>
+                                            <small>Coup @ex.MoveNumber : @ex.MistakeMoveSan · @ex.PlayedAtUtc.ToString("dd/MM/yyyy")</small>
+                                        </div>
+                                    </button>
+                                }
+                            </div>
+                        </aside>
+                    }
+                </div>
+            }
+        </main>
+    </div>
+</div>
+
+<style>
+    /* ==========================================================================
+       Mes Erreurs - ChessTrainer Design System
+       ========================================================================== */
+    .mistakes-import-box {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 14px rgba(35, 46, 39, .04);
+    }
+
+    .mistakes-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #768078;
+        font-weight: 700;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .mistakes-input-row {
+        margin-bottom: 8px;
+    }
+
+    .mistakes-text-input {
+        width: 100%;
+        background: #f7f6f0;
+        border: 1px solid #d5d3cb;
+        color: var(--ink);
+        padding: 9px 12px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        outline: none;
+        transition: border-color .15s, background .15s;
+    }
+
+    .mistakes-text-input:focus {
+        border-color: var(--forest-2);
+        background: #fff;
+    }
+
+    .mistakes-controls-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .mistakes-period-wrap {
+        flex: 1;
+    }
+
+    .mistakes-select {
+        width: 100%;
+        background: #f7f6f0;
+        border: 1px solid #d5d3cb;
+        color: var(--ink);
+        padding: 8px 10px;
+        border-radius: 9px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: inherit;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .mistakes-submit-btn {
+        background: var(--forest);
+        color: white;
+        border: none;
+        border-radius: 9px;
+        padding: 8px 14px;
+        font-weight: 700;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background .15s, transform .1s;
+        white-space: nowrap;
+    }
+
+    .mistakes-submit-btn:hover:not(:disabled) {
+        background: var(--forest-2);
+    }
+
+    .mistakes-submit-btn:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    .mistakes-retention-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #f0eee7;
+        border: 1px solid #e2dfd5;
+        padding: 5px 8px;
+        border-radius: 7px;
+        font-size: 10px;
+        color: #6d756e;
+    }
+
+    .mistakes-cache-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px dashed #e2dfd5;
+        font-size: 11px;
+        color: #828a83;
+    }
+
+    .mistakes-clear-btn {
+        background: transparent;
+        border: 1px solid #d5a948;
+        color: #8b6b1b;
+        padding: 2px 6px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .mistakes-clear-btn:hover {
+        background: #faf3e0;
+    }
+
+    .mistakes-loading-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 14px;
+        text-align: center;
+    }
+
+    .mistakes-spinner {
+        width: 22px;
+        height: 22px;
+        border: 3px solid #e5e2d9;
+        border-top-color: var(--forest);
+        border-radius: 50%;
+        animation: spin-mistakes .7s linear infinite;
+        margin: 0 auto 6px auto;
+    }
+
+    @@keyframes spin-mistakes {
+        to { transform: rotate(360deg); }
+    }
+
+    .mistakes-progress-track {
+        background: #e5e2d9;
+        border-radius: 6px;
+        height: 6px;
+        overflow: hidden;
+        margin: 6px 0;
+    }
+
+    .mistakes-progress-track span {
+        display: block;
+        height: 100%;
+        background: var(--lime);
+        border-radius: inherit;
+        transition: width .25s ease;
+    }
+
+    .mistakes-error-card {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #faebe8;
+        border: 1px solid #f0cac3;
+        color: #8f3427;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        margin-bottom: 12px;
+    }
+
+    .mistakes-section-tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #768078;
+        font-weight: 700;
+        margin: 14px 4px 8px;
+    }
+
+    .mistakes-openings-scroll {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .mistakes-opening-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        background: transparent;
+        cursor: pointer;
+        text-align: left;
+        transition: all .15s ease;
+    }
+
+    .mistakes-opening-btn:hover {
+        background: rgba(255, 255, 255, .6);
+    }
+
+    .mistakes-opening-btn.active {
+        background: var(--paper);
+        border-color: #d9ded6;
+        box-shadow: 0 4px 14px rgba(33, 45, 38, .07);
+    }
+
+    .mistakes-opening-text strong {
+        display: block;
+        font-size: 12px;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .mistakes-opening-text small {
+        color: #858b85;
+        font-size: 10px;
+    }
+
+    .mistakes-rate-pill {
+        background: #fbe6e3;
+        color: #a33b2c;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 6px;
+        border-radius: 6px;
+    }
+
+    /* Content Area Styles */
+    .mistakes-welcome-card {
+        max-width: 680px;
+        margin: 40px auto;
+        padding: 40px 32px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 16px 40px rgba(35, 46, 39, .06);
+    }
+
+    .mistakes-welcome-icon {
+        font-size: 42px;
+        margin-bottom: 12px;
+    }
+
+    .mistakes-welcome-card h2 {
+        font-family: "Manrope", sans-serif;
+        font-size: clamp(22px, 2.4vw, 30px);
+        margin: 6px 0 10px;
+        letter-spacing: -.03em;
+        color: var(--forest);
+    }
+
+    .mistakes-welcome-card p {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 0 0 20px;
+    }
+
+    .mistakes-security-notice {
+        background: #f7f6f0;
+        border: 1px solid #e5e2d9;
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-size: 12px;
+        color: #6b756e;
+        text-align: left;
+    }
+
+    .mistakes-study-shell {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: minmax(380px, 600px) minmax(280px, 1fr);
+        gap: clamp(20px, 3.5vw, 44px);
+        align-items: start;
+        padding: clamp(18px, 3vw, 30px);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--paper);
+        box-shadow: 0 18px 50px rgba(35, 46, 39, .08);
+    }
+
+    .mistakes-board-column {
+        width: 100%;
+    }
+
+    .mistakes-board-topline,
+    .mistakes-board-bottomline {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 32px;
+        margin-bottom: 8px;
+    }
+
+    .mistakes-board-bottomline {
+        margin: 8px 0 0;
+    }
+
+    .mistakes-date-label {
+        font-size: 11px;
+        color: #879088;
+        font-weight: 600;
+    }
+
+    .mistakes-details-panel {
+        background: #f7f6f0;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        margin-top: 14px;
+    }
+
+    .mistakes-move-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #e7e4dc;
+    }
+
+    .mistakes-bad-move small,
+    .mistakes-result-type small {
+        display: block;
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #808a82;
+        font-weight: 700;
+    }
+
+    .mistakes-bad-move strong {
+        font-size: 18px;
+        color: #b73928;
+        font-family: "Manrope", sans-serif;
+    }
+
+    .mistakes-result-type span {
+        display: inline-block;
+        background: #faebe8;
+        color: #8f3427;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 6px;
+        text-transform: capitalize;
+    }
+
+    .mistakes-explanation {
+        color: #4b574f;
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 0 0 12px;
+    }
+
+    .mistakes-link-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--paper);
+        border: 1px solid #dcdad1;
+        color: var(--forest);
+        padding: 7px 12px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        transition: all .15s ease;
+    }
+
+    .mistakes-link-btn:hover {
+        border-color: var(--forest);
+        background: #fff;
+    }
+
+    .mistakes-list-column {
+        width: 100%;
+    }
+
+    .mistakes-column-header {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #768078;
+        margin-bottom: 10px;
+    }
+
+    .mistakes-items-scroll {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 520px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .mistakes-game-card {
+        display: grid;
+        grid-template-columns: 28px 1fr;
+        align-items: center;
+        gap: 10px;
+        background: #f7f6f0;
+        border: 1px solid #e5e2d9;
+        padding: 10px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: left;
+        transition: all .15s ease;
+    }
+
+    .mistakes-game-card:hover {
+        background: #fff;
+        border-color: #d1cdc2;
+    }
+
+    .mistakes-game-card.active {
+        background: #fff;
+        border-color: var(--forest);
+        box-shadow: 0 4px 12px rgba(35, 46, 39, .08);
+    }
+
+    .mistakes-game-num {
+        font-size: 11px;
+        font-weight: 800;
+        color: #8b948d;
+    }
+
+    .mistakes-game-card.active .mistakes-game-num {
+        color: var(--forest);
+    }
+
+    .mistakes-game-info strong {
+        display: block;
+        font-size: 12px;
+        color: var(--ink);
+    }
+
+    .mistakes-game-info small {
+        color: #828b84;
+        font-size: 10px;
+    }
+
+    @@media (max-width: 900px) {
+        .mistakes-study-shell {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@code {
+    private string username = "";
+    private int monthsToFetch = 3;
+    private bool isLoading;
+    private string currentStatus = "";
+    private int totalArchives;
+    private int downloadedArchives;
+    private string? errorMessage;
+    private bool hasCachedData;
+    private string cachedExpiration = "";
+
+    private IReadOnlyList<ChessComGame> allFetchedGames = [];
+    private IReadOnlyList<OpeningMistakeSummary> summaries = [];
+    private OpeningMistakeSummary? activeSummary;
+    private MistakeExercise? selectedExercise;
+
+    protected override void OnInitialized()
+    {
+        CheckCacheStatus();
+    }
+
+    private void CheckCacheStatus()
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            hasCachedData = false;
+            return;
+        }
+
+        hasCachedData = StorageService.HasValidCache(username, out var meta);
+        if (hasCachedData && meta != null)
+        {
+            cachedExpiration = $"expire à {meta.ExpiresAtUtc.ToLocalTime():HH:mm}";
+        }
+    }
+
+    private async Task FetchAndAnalyzeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(username)) return;
+
+        isLoading = true;
+        errorMessage = null;
+        currentStatus = "Démarrage de la récupération...";
+        totalArchives = 0;
+        downloadedArchives = 0;
+
+        var progress = new Progress<FetchProgress>(p =>
+        {
+            totalArchives = p.TotalArchives;
+            downloadedArchives = p.DownloadedArchives;
+            currentStatus = p.CurrentStatus;
+            if (!string.IsNullOrEmpty(p.ErrorMessage))
+            {
+                errorMessage = p.ErrorMessage;
+            }
+            StateHasChanged();
+        });
+
+        try
+        {
+            allFetchedGames = await ChessComService.GetOrFetchPlayerGamesAsync(
+                username, monthsToFetch, progress);
+
+            if (allFetchedGames.Count > 0)
+            {
+                summaries = MistakeAnalyzer.AnalyzeLosses(username, allFetchedGames);
+                if (summaries.Count > 0)
+                {
+                    SelectSummary(summaries[0]);
+                }
+                CheckCacheStatus();
+            }
+            else if (string.IsNullOrEmpty(errorMessage))
+            {
+                errorMessage = "Aucune partie trouvée ou joueur sans parties enregistrées.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Une erreur est survenue : {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SelectSummary(OpeningMistakeSummary summary)
+    {
+        activeSummary = summary;
+        selectedExercise = summary.Exercises.FirstOrDefault();
+    }
+
+    private void PurgeCache()
+    {
+        if (!string.IsNullOrWhiteSpace(username))
+        {
+            StorageService.DeletePlayerDirectory(username);
+            hasCachedData = false;
+            allFetchedGames = [];
+            summaries = [];
+            activeSummary = null;
+            selectedExercise = null;
+        }
+    }
+}

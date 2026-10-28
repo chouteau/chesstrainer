@@ -57,5 +57,5 @@ Ce document définit les directives techniques, règles de codage et standards d
 - **Branche de production** : `prod`.
 - **Registry** : GitHub Container Registry (`ghcr.io/chouteau/chesstrainer`).
 - **Workflows CI/CD** :
-  - Publication Docker : déclenchée automatiquement lors d'une Pull Request sur la branche `prod` (`.github/workflows/docker-publish.yml`).
+  - Publication Docker : déclenchée automatiquement lors d'une Pull Request ou d'un push sur la branche `prod`, ainsi que manuellement (`.github/workflows/docker-publish.yml`). Base runtime maintenue à jour avec `pull: true` pour intégrer immédiatement les correctifs de sécurité Microsoft/Ubuntu.
   - Purge des anciennes images : planifiée quotidiennement et déclenchable manuellement avec simulation (`.github/workflows/docker-cleanup.yml`). Nettoie les versions de plus de 7 jours tout en préservant `latest` et la version la plus haute.
