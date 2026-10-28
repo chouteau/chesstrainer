@@ -8,6 +8,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddSingleton<TrainerCatalog>();
 builder.Services.AddSingleton<OpeningQuizCatalog>();
+builder.Services.AddSingleton<ChessGameStorageService>();
+builder.Services.AddSingleton<GameMistakeAnalyzer>();
+builder.Services.AddHttpClient<ChessComService>();
+builder.Services.AddHostedService<CacheCleanupBackgroundService>();
 
 var app = builder.Build();
 

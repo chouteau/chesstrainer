@@ -56,6 +56,14 @@ Le module de **Quiz des ouvertures** met à l'épreuve votre sens de l'observati
 - **Orientation du plateau** : basculement vue des Blancs (a1 en bas à gauche) ou vue des Noirs (inversé).
 - **Modes de jeu** : entraînement continu ou défi chrono de 30 secondes avec statistiques complètes (score, série, record, précision).
 
+---
+
+### 4. 📉 Révision de mes erreurs Chess.com (`/erreurs`)
+- **Import public sans mot de passe** : synchronisation directe des parties récentes via l'API publique de Chess.com en saisissant votre pseudonyme.
+- **Détection des ouvertures critiques** : identification automatique des ouvertures enregistrant le plus fort taux de défaites (mat subi, abandon, zeitnot).
+- **Entraînement interactif personnalisé** : rejouez la position critique sur l'échiquier (orienté selon votre couleur) et analysez le coup fatal.
+- **Rétention temporaire stricte (24h max)** : les parties sont stockées dans un dossier isolé par pseudo (`App_Data/cache/{pseudo}/`) et purgées automatiquement après 24 heures par une tâche de fond (ou manuellement via le bouton de purge).
+
 ![Entraîneur de pièges tactiques](docs/images/chess-trainer-traps.png)
 
 ---
